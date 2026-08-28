@@ -16,7 +16,7 @@ export default async function CustomerLayout({ children }: { children: ReactNode
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-cc-cream-100">
+    <div className="flex min-h-full flex-1 flex-col bg-cc-green-900">
       <DesktopNav />
       <div className="flex-1 pb-4">{children}</div>
       <BottomNav />

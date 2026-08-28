@@ -54,6 +54,8 @@ export const rewardSchema = z.object({
   name: z.string().trim().min(2),
   description: z.string().trim().optional(),
   imageUrl: z.string().trim().url().optional().or(z.literal("")),
+  icon: z.string().trim().max(8).optional(),
+  category: z.enum(["PRODUCT", "DISCOUNT"]).default("PRODUCT"),
   pointsCost: z.coerce.number().int().min(1),
   stock: z.coerce.number().int().min(0).optional(),
   requiredTierId: z.string().trim().optional(),

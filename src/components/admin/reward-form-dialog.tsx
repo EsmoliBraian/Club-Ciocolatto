@@ -52,7 +52,10 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
         </DialogHeader>
         <form action={submit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
           {reward && <input type="hidden" name="id" value={reward.id} />}
-          <Field label="Nombre" name="name" defaultValue={reward?.name} required />
+          <div className="grid grid-cols-[1fr_5rem] gap-3">
+            <Field label="Nombre" name="name" defaultValue={reward?.name} required />
+            <Field label="Ícono" name="icon" defaultValue={reward?.icon ?? undefined} placeholder="☕" />
+          </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" name="description" defaultValue={reward?.description ?? undefined} rows={2} />
@@ -60,6 +63,18 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
           <div className="grid grid-cols-2 gap-3">
             <Field label="Puntos" name="pointsCost" type="number" defaultValue={reward?.pointsCost} required />
             <Field label="Stock (vacío = ilimitado)" name="stock" type="number" defaultValue={reward?.stock ?? undefined} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="category">Categoría</Label>
+            <Select name="category" defaultValue={reward?.category ?? "PRODUCT"}>
+              <SelectTrigger id="category" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PRODUCT">Producto</SelectItem>
+                <SelectItem value="DISCOUNT">Descuento</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="requiredTierId">Nivel requerido</Label>

@@ -156,6 +156,8 @@ export async function saveRewardAction(_prev: ActionState, formData: FormData): 
     name: formData.get("name"),
     description: formData.get("description"),
     imageUrl: formData.get("imageUrl") ?? "",
+    icon: formData.get("icon"),
+    category: formData.get("category"),
     pointsCost: formData.get("pointsCost"),
     stock: optionalString(formData, "stock"),
     requiredTierId: optionalString(formData, "requiredTierId"),

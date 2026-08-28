@@ -1,17 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Gift, Flame } from "lucide-react";
+import { Coffee } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId, isBirthdayWindowActive } from "@/server/services/customer-service";
-import { listActiveTiersCached } from "@/server/services/tier-service";
-import { calculateTierProgress } from "@/server/services/tier-service";
+import { listActiveTiersCached, calculateTierProgress } from "@/server/services/tier-service";
 import { listRewardsForCustomer } from "@/server/services/reward-service";
 import { getMissionsForCustomer } from "@/server/services/mission-service";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { MissionCard } from "@/components/customer/mission-card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Inicio" };
@@ -31,18 +30,26 @@ export default async function CustomerHomePage() {
     rewards.find((r) => r.eligible) ??
     rewards[0];
 
-  const activeMission = [...missions]
+  const activeMissions = [...missions]
     .filter((m) => m.status === "IN_PROGRESS")
-    .sort((a, b) => b.currentValue / b.mission.targetValue - a.currentValue / a.mission.targetValue)[0];
+    .sort((a, b) => b.currentValue / b.mission.targetValue - a.currentValue / a.mission.targetValue)
+    .slice(0, 2);
 
   const showBirthday =
     isBirthdayWindowActive(profile.user.birthDate) &&
     profile.birthdayRewardClaimedYear !== new Date().getFullYear();
 
+  const initials = `${profile.user.firstName[0]}${profile.user.lastName[0] ?? ""}`.toUpperCase();
+
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pt-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">Hola, {profile.user.firstName} 👋</h1>
+    <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pt-6">
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-xl font-semibold text-cc-cream-50">
+          Hola, {profile.user.firstName} 👋
+        </h1>
+        <Avatar className="size-10">
+          <AvatarFallback className="bg-cc-gold-400 font-heading text-cc-green-900">{initials}</AvatarFallback>
+        </Avatar>
       </div>
 
       {showBirthday && <BirthdayBanner />}
@@ -50,71 +57,61 @@ export default async function CustomerHomePage() {
       <TierProgressCard pointsBalance={profile.pointsBalance} progress={progress} />
 
       {nextBenefit && (
-        <Card>
-          <CardContent className="flex items-center justify-between gap-4 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-secondary text-primary">
-                <Gift className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Tu próximo beneficio
-                </p>
-                <p className="font-medium">{nextBenefit.reward.name}</p>
-                <p className="text-sm text-cc-gold-400 font-semibold">{nextBenefit.reward.pointsCost} puntos</p>
-              </div>
-            </div>
-            {nextBenefit.eligible ? (
-              <RedeemButton
-                rewardId={nextBenefit.reward.id}
-                rewardName={nextBenefit.reward.name}
-                pointsCost={nextBenefit.reward.pointsCost}
-                pointsBalance={profile.pointsBalance}
-                size="sm"
-              />
-            ) : (
-              <Button size="sm" variant="outline" disabled>
-                Canjear
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {activeMission && (
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-4">
-            <div className="flex items-center gap-2">
-              <Flame className="size-4 text-cc-gold-400" />
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Misión activa
-              </p>
-            </div>
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cc-cream-50 p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+              <Coffee className="size-5" />
+            </span>
             <div>
-              <p className="font-medium">{activeMission.mission.description}</p>
-              <div className="mt-2 flex items-center gap-3">
-                <Progress
-                  value={(activeMission.currentValue / activeMission.mission.targetValue) * 100}
-                  className="h-2 flex-1"
-                />
-                <span className="text-sm font-medium tabular-nums text-muted-foreground">
-                  {activeMission.currentValue}/{activeMission.mission.targetValue}
-                </span>
-              </div>
-              <p className="mt-1 text-sm font-semibold text-primary">
-                +{activeMission.mission.rewardPoints} puntos
+              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Beneficio disponible
+              </p>
+              <p className="font-heading font-semibold text-cc-green-900">{nextBenefit.reward.name}</p>
+              <p className="text-xs font-semibold text-cc-gold-400">
+                {nextBenefit.eligible ? "GRATIS" : `${nextBenefit.reward.pointsCost} pts`}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          {nextBenefit.eligible ? (
+            <RedeemButton
+              rewardId={nextBenefit.reward.id}
+              rewardName={nextBenefit.reward.name}
+              pointsCost={nextBenefit.reward.pointsCost}
+              pointsBalance={profile.pointsBalance}
+              size="sm"
+            />
+          ) : (
+            <Button size="sm" variant="outline" disabled>
+              Canjear
+            </Button>
+          )}
+        </div>
       )}
 
-      <Link
-        href="/misiones"
-        className="text-center text-sm font-medium text-primary hover:underline"
-      >
-        Ver todas mis misiones y beneficios →
-      </Link>
+      {activeMissions.length > 0 && (
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center justify-between">
+            <p className="font-heading font-semibold text-cc-cream-50">Misiones activas</p>
+            <Link href="/misiones" className="text-xs font-medium text-cc-gold-300 hover:underline">
+              Ver todas
+            </Link>
+          </div>
+          {activeMissions.map((m, i) => (
+            <MissionCard
+              key={m.mission.id}
+              icon={m.mission.icon}
+              title={m.mission.name}
+              description={m.mission.description}
+              current={m.currentValue}
+              target={m.mission.targetValue}
+              rewardPoints={m.mission.rewardPoints}
+              completed={false}
+              colorIndex={i}
+              compact
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

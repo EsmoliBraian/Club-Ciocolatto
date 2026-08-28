@@ -29,7 +29,7 @@ export default async function PointsHistoryPage() {
       ) : (
         groups.map((group) => (
           <div key={group.label}>
-            <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <p className="mb-2 text-xs font-semibold tracking-wide text-cc-cream-200 uppercase">
               {group.label}
             </p>
             <Card>

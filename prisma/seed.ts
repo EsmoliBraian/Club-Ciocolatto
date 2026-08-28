@@ -114,44 +114,49 @@ async function main() {
   await Promise.all([
     prisma.reward.upsert({
       where: { id: "seed-reward-cafe" },
-      update: {},
+      update: { icon: "☕" },
       create: {
         id: "seed-reward-cafe",
         name: "Café americano",
         description: "Un café americano gratis en tu próxima visita.",
+        icon: "☕",
         pointsCost: 100,
         active: true,
       },
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-medialuna" },
-      update: {},
+      update: { icon: "🥐" },
       create: {
         id: "seed-reward-medialuna",
         name: "Medialuna",
         description: "Medialuna de manteca gratis.",
+        icon: "🥐",
         pointsCost: 120,
         active: true,
       },
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-torta" },
-      update: {},
+      update: { icon: "🍰" },
       create: {
         id: "seed-reward-torta",
         name: "Porción de torta",
         description: "Elegí tu porción de torta favorita.",
+        icon: "🍰",
         pointsCost: 200,
         active: true,
       },
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-10off" },
-      update: {},
+      update: { category: "DISCOUNT", icon: "💰" },
       create: {
         id: "seed-reward-10off",
         name: "10% OFF",
         description: "10% de descuento en tu compra. Beneficio Fan Ciocolatto.",
+        category: "DISCOUNT",
+        icon: "💰",
         pointsCost: 150,
         requiredTierId: fan.id,
         active: true,
@@ -159,11 +164,13 @@ async function main() {
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-5000off" },
-      update: {},
+      update: { category: "DISCOUNT", icon: "🎁" },
       create: {
         id: "seed-reward-5000off",
         name: "$5.000 OFF",
         description: "Beneficio exclusivo Fanático Ciocolatto.",
+        category: "DISCOUNT",
+        icon: "🎁",
         pointsCost: 400,
         requiredTierId: fanatico.id,
         active: true,

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Gift, Star } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
-import { listRewardsForCustomer } from "@/server/services/reward-service";
-import { Card, CardContent } from "@/components/ui/card";
+import { listRewardsForCustomer, type RewardEligibility } from "@/server/services/reward-service";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RedeemButton } from "@/components/customer/redeem-button";
 
 export const metadata: Metadata = { title: "Canjear" };
@@ -22,52 +22,95 @@ export default async function RedeemPage() {
   if (!profile) return null;
 
   const rewards = await listRewardsForCustomer(profile.id);
+  const products = rewards.filter((r) => r.reward.category === "PRODUCT");
+  const discounts = rewards.filter((r) => r.reward.category === "DISCOUNT");
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-semibold">Canjear</h1>
-        <div className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-primary">
+        <h1 className="font-heading text-xl font-semibold text-cc-cream-50">Canjear puntos</h1>
+        <div className="flex items-center gap-1.5 rounded-full bg-cc-cream-50/10 px-3 py-1 text-sm font-semibold text-cc-gold-300">
           <Star className="size-3.5 fill-cc-gold-400 text-cc-gold-400" />
-          {profile.pointsBalance} puntos
+          {profile.pointsBalance} pts
         </div>
       </div>
 
       {rewards.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <Gift className="size-8 text-muted-foreground" />
-            <p className="font-medium">Seguí sumando puntos para desbloquear nuevos beneficios.</p>
-          </CardContent>
-        </Card>
+        <EmptyState />
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {rewards.map(({ reward, eligible, reason }) => (
-            <Card key={reward.id} className={!eligible ? "opacity-70" : undefined}>
-              <CardContent className="flex flex-col gap-2 py-4">
-                <p className="font-medium leading-tight">{reward.name}</p>
-                {reward.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{reward.description}</p>
-                )}
-                <p className="text-sm font-semibold text-cc-gold-400">{reward.pointsCost} pts</p>
-                {eligible ? (
-                  <RedeemButton
-                    rewardId={reward.id}
-                    rewardName={reward.name}
-                    pointsCost={reward.pointsCost}
-                    pointsBalance={profile.pointsBalance}
-                    size="sm"
-                  />
-                ) : (
-                  <Button size="sm" variant="outline" disabled>
-                    {reason ? REASON_LABEL[reason] : "No disponible"}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Tabs defaultValue="todos">
+          <TabsList className="bg-cc-cream-50/10">
+            <TabsTrigger value="todos" className="data-active:bg-cc-cream-50">
+              Todos
+            </TabsTrigger>
+            <TabsTrigger value="productos" className="data-active:bg-cc-cream-50">
+              Productos
+            </TabsTrigger>
+            <TabsTrigger value="descuentos" className="data-active:bg-cc-cream-50">
+              Descuentos
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="todos" className="mt-3">
+            <RewardGrid items={rewards} pointsBalance={profile.pointsBalance} />
+          </TabsContent>
+          <TabsContent value="productos" className="mt-3">
+            <RewardGrid items={products} pointsBalance={profile.pointsBalance} />
+          </TabsContent>
+          <TabsContent value="descuentos" className="mt-3">
+            <RewardGrid items={discounts} pointsBalance={profile.pointsBalance} />
+          </TabsContent>
+        </Tabs>
       )}
+    </div>
+  );
+}
+
+function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; pointsBalance: number }) {
+  if (items.length === 0) {
+    return <EmptyState label="Nada por acá todavía." />;
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {items.map(({ reward, eligible, reason }) => (
+        <div
+          key={reward.id}
+          className={`flex flex-col gap-2 rounded-2xl bg-cc-cream-50 p-3.5 shadow-sm ${!eligible ? "opacity-60" : ""}`}
+        >
+          <span className="text-2xl">{reward.icon ?? "🎁"}</span>
+          <div className="min-h-8">
+            <p className="font-medium leading-tight text-cc-green-900">{reward.name}</p>
+            {reward.category === "PRODUCT" && (
+              <p className="text-xs font-semibold text-cc-gold-400">GRATIS</p>
+            )}
+          </div>
+          <p className="text-xs font-semibold text-muted-foreground">{reward.pointsCost} pts</p>
+          {eligible ? (
+            <RedeemButton
+              rewardId={reward.id}
+              rewardName={reward.name}
+              pointsCost={reward.pointsCost}
+              pointsBalance={pointsBalance}
+              size="sm"
+            />
+          ) : (
+            <Button size="sm" variant="outline" disabled>
+              {reason ? REASON_LABEL[reason] : "No disponible"}
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl bg-cc-cream-50 py-12 text-center">
+      <Gift className="size-8 text-muted-foreground" />
+      <p className="font-medium text-cc-green-900">
+        {label ?? "Seguí sumando puntos para desbloquear nuevos beneficios."}
+      </p>
     </div>
   );
 }

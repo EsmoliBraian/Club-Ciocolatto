@@ -4,9 +4,8 @@ import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { getMissionsForCustomer } from "@/server/services/mission-service";
 import { getReferralStats } from "@/server/services/referral-service";
-import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { MissionCard } from "@/components/customer/mission-card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const metadata: Metadata = { title: "Misiones" };
 
@@ -21,87 +20,92 @@ export default async function MissionsPage() {
   const orderDriven = missions.filter((m) => m.mission.type !== "REFERRAL");
   const referralMission = missions.find((m) => m.mission.type === "REFERRAL");
 
+  const all = [
+    ...(referralMission
+      ? [
+          {
+            mission: referralMission.mission,
+            currentValue: Math.min(referralStats.completed, referralMission.mission.targetValue),
+            completed: referralStats.completed >= referralMission.mission.targetValue,
+          },
+        ]
+      : []),
+    ...orderDriven.map((m) => ({
+      mission: m.mission,
+      currentValue: m.currentValue,
+      completed: m.status === "COMPLETED" || m.status === "REWARD_CLAIMED",
+    })),
+  ];
+
+  const active = all.filter((m) => !m.completed);
+  const completed = all.filter((m) => m.completed);
+
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
-      <h1 className="font-heading text-2xl font-semibold">Misiones</h1>
+      <h1 className="font-heading text-xl font-semibold text-cc-cream-50">Misiones</h1>
 
-      {orderDriven.length === 0 && !referralMission ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-            <Trophy className="size-8 text-muted-foreground" />
-            <p className="font-medium">Todavía no tenés misiones activas.</p>
-            <p className="text-sm text-muted-foreground">Volvé pronto. ☕</p>
-          </CardContent>
-        </Card>
+      {all.length === 0 ? (
+        <EmptyState />
       ) : (
-        <div className="flex flex-col gap-3">
-          {referralMission && (
-            <MissionCard
-              icon={referralMission.mission.icon}
-              title={referralMission.mission.name}
-              description={referralMission.mission.description}
-              current={Math.min(referralStats.completed, referralMission.mission.targetValue)}
-              target={referralMission.mission.targetValue}
-              rewardPoints={referralMission.mission.rewardPoints}
-              completed={referralStats.completed >= referralMission.mission.targetValue}
-            />
-          )}
-          {orderDriven.map((m) => (
-            <MissionCard
-              key={m.mission.id}
-              icon={m.mission.icon}
-              title={m.mission.name}
-              description={m.mission.description}
-              current={m.currentValue}
-              target={m.mission.targetValue}
-              rewardPoints={m.mission.rewardPoints}
-              completed={m.status === "COMPLETED" || m.status === "REWARD_CLAIMED"}
-            />
-          ))}
-        </div>
+        <Tabs defaultValue="activas">
+          <TabsList className="bg-cc-cream-50/10">
+            <TabsTrigger value="activas" className="data-active:bg-cc-cream-50">
+              Activas
+            </TabsTrigger>
+            <TabsTrigger value="completadas" className="data-active:bg-cc-cream-50">
+              Completadas
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="activas" className="mt-3 flex flex-col gap-2.5">
+            {active.length === 0 ? (
+              <EmptyState label="No tenés misiones activas ahora." />
+            ) : (
+              active.map((m, i) => (
+                <MissionCard
+                  key={m.mission.id}
+                  icon={m.mission.icon}
+                  title={m.mission.name}
+                  description={m.mission.description}
+                  current={m.currentValue}
+                  target={m.mission.targetValue}
+                  rewardPoints={m.mission.rewardPoints}
+                  completed={false}
+                  colorIndex={i}
+                />
+              ))
+            )}
+          </TabsContent>
+          <TabsContent value="completadas" className="mt-3 flex flex-col gap-2.5">
+            {completed.length === 0 ? (
+              <EmptyState label="Todavía no completaste misiones." />
+            ) : (
+              completed.map((m, i) => (
+                <MissionCard
+                  key={m.mission.id}
+                  icon={m.mission.icon}
+                  title={m.mission.name}
+                  description={m.mission.description}
+                  current={m.currentValue}
+                  target={m.mission.targetValue}
+                  rewardPoints={m.mission.rewardPoints}
+                  completed
+                  colorIndex={i}
+                />
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
 }
 
-function MissionCard({
-  icon,
-  title,
-  description,
-  current,
-  target,
-  rewardPoints,
-  completed,
-}: {
-  icon: string | null;
-  title: string;
-  description: string;
-  current: number;
-  target: number;
-  rewardPoints: number;
-  completed: boolean;
-}) {
+function EmptyState({ label }: { label?: string }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{icon ?? "🎯"}</span>
-            <div>
-              <p className="font-medium leading-tight">{title}</p>
-              <p className="text-sm text-muted-foreground">{description}</p>
-            </div>
-          </div>
-          {completed && <Badge className="bg-cc-gold-400 text-cc-green-900">Completada</Badge>}
-        </div>
-        <div className="flex items-center gap-3">
-          <Progress value={(current / target) * 100} className="h-2 flex-1" />
-          <span className="text-sm font-medium tabular-nums text-muted-foreground">
-            {current}/{target}
-          </span>
-        </div>
-        <p className="text-sm font-semibold text-primary">+{rewardPoints} puntos</p>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center gap-2 rounded-2xl bg-cc-cream-50 py-12 text-center">
+      <Trophy className="size-8 text-muted-foreground" />
+      <p className="font-medium text-cc-green-900">{label ?? "Todavía no tenés misiones activas."}</p>
+      {!label && <p className="text-sm text-muted-foreground">Volvé pronto. ☕</p>}
+    </div>
   );
 }

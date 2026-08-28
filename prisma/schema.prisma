@@ -69,6 +69,11 @@ enum RedemptionStatus {
   CANCELLED
 }
 
+enum RewardCategory {
+  PRODUCT
+  DISCOUNT
+}
+
 enum ReferralStatus {
   PENDING
   COMPLETED
@@ -144,22 +149,22 @@ model User {
 // accounts never carry loyalty fields, and so the loyalty engine only ever
 // deals with a narrow, purpose-built shape.
 model CustomerProfile {
-  id             String    @id @default(cuid())
-  userId         String    @unique
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pointsBalance  Int       @default(0) // spendable balance — reconstructable as SUM(PointTransaction.amount)
-  lifetimePoints Int       @default(0) // status/tier basis — never reduced by REDEEM or EXPIRATION
-  tierId         String?
-  tier           LoyaltyTier? @relation(fields: [tierId], references: [id])
-  qrToken        String    @unique // opaque, cryptographically random identifier embedded in the customer's QR (see src/lib/codes.ts)
-  referralCode   String    @unique
-  totalSpent     Decimal   @default(0) @db.Decimal(12, 2)
-  totalOrders    Int       @default(0)
-  firstOrderAt   DateTime?
-  lastOrderAt    DateTime?
+  id                        String       @id @default(cuid())
+  userId                    String       @unique
+  user                      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointsBalance             Int          @default(0) // spendable balance — reconstructable as SUM(PointTransaction.amount)
+  lifetimePoints            Int          @default(0) // status/tier basis — never reduced by REDEEM or EXPIRATION
+  tierId                    String?
+  tier                      LoyaltyTier? @relation(fields: [tierId], references: [id])
+  qrToken                   String       @unique // opaque, cryptographically random identifier embedded in the customer's QR (see src/lib/codes.ts)
+  referralCode              String       @unique
+  totalSpent                Decimal      @default(0) @db.Decimal(12, 2)
+  totalOrders               Int          @default(0)
+  firstOrderAt              DateTime?
+  lastOrderAt               DateTime?
   birthdayRewardClaimedYear Int?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 
   pointTransactions PointTransaction[]
   orders            Order[]
@@ -203,19 +208,19 @@ model LoyaltyTier {
 // recomputes. `amount` is signed (negative for redemptions/expirations) so
 // balance = SUM(amount).
 model PointTransaction {
-  id                 String               @id @default(cuid())
-  customerProfileId  String
-  customerProfile    CustomerProfile      @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  type               PointTransactionType
-  source             PointSource
-  amount             Int
-  balanceAfter       Int
-  description        String
-  referenceType      String? // e.g. "Order", "Mission", "RewardRedemption", "Referral"
-  referenceId        String?
-  metadata           Json?
-  createdById        String? // admin/employee who triggered a manual adjustment
-  createdAt          DateTime             @default(now())
+  id                String               @id @default(cuid())
+  customerProfileId String
+  customerProfile   CustomerProfile      @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  type              PointTransactionType
+  source            PointSource
+  amount            Int
+  balanceAfter      Int
+  description       String
+  referenceType     String? // e.g. "Order", "Mission", "RewardRedemption", "Referral"
+  referenceId       String?
+  metadata          Json?
+  createdById       String? // admin/employee who triggered a manual adjustment
+  createdAt         DateTime             @default(now())
 
   @@index([customerProfileId, createdAt])
   @@index([referenceType, referenceId])
@@ -254,18 +259,18 @@ model Mission {
 // One row per customer per mission "cycle" (cycleKey lets a monthly mission
 // like "visit 3 times this month" restart automatically: cycleKey = "2026-08").
 model MissionProgress {
-  id                 String                 @id @default(cuid())
-  missionId          String
-  mission            Mission                @relation(fields: [missionId], references: [id], onDelete: Cascade)
-  customerProfileId  String
-  customerProfile    CustomerProfile        @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  currentValue       Int                    @default(0)
-  status             MissionProgressStatus  @default(IN_PROGRESS)
-  completedAt        DateTime?
-  claimedAt          DateTime?
-  cycleKey           String
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
+  id                String                @id @default(cuid())
+  missionId         String
+  mission           Mission               @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  customerProfileId String
+  customerProfile   CustomerProfile       @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  currentValue      Int                   @default(0)
+  status            MissionProgressStatus @default(IN_PROGRESS)
+  completedAt       DateTime?
+  claimedAt         DateTime?
+  cycleKey          String
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@unique([missionId, customerProfileId, cycleKey])
   @@index([customerProfileId, status])
@@ -276,20 +281,22 @@ model MissionProgress {
 // ─────────────────────────────────────────────────────────────────────────
 
 model Reward {
-  id             String    @id @default(cuid())
+  id             String         @id @default(cuid())
   name           String
   description    String?
   imageUrl       String?
+  icon           String? // emoji shown in the customer store, e.g. "☕"
+  category       RewardCategory @default(PRODUCT)
   pointsCost     Int
   stock          Int? // null = unlimited
   requiredTierId String?
-  requiredTier   LoyaltyTier? @relation(fields: [requiredTierId], references: [id])
+  requiredTier   LoyaltyTier?   @relation(fields: [requiredTierId], references: [id])
   perUserLimit   Int? // null = unlimited
   validFrom      DateTime?
   validUntil     DateTime?
-  active         Boolean   @default(true)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  active         Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   redemptions RewardRedemption[]
   missions    Mission[]
@@ -298,19 +305,19 @@ model Reward {
 }
 
 model RewardRedemption {
-  id                String            @id @default(cuid())
+  id                String           @id @default(cuid())
   customerProfileId String
-  customerProfile   CustomerProfile   @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  customerProfile   CustomerProfile  @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
   rewardId          String
-  reward            Reward            @relation(fields: [rewardId], references: [id])
+  reward            Reward           @relation(fields: [rewardId], references: [id])
   pointsSpent       Int
-  redemptionCode    String            @unique
-  status            RedemptionStatus  @default(PENDING)
+  redemptionCode    String           @unique
+  status            RedemptionStatus @default(PENDING)
   expiresAt         DateTime?
   redeemedAt        DateTime?
   redeemedById      String?
-  redeemedBy        User?             @relation("RedeemedByEmployee", fields: [redeemedById], references: [id])
-  createdAt         DateTime          @default(now())
+  redeemedBy        User?            @relation("RedeemedByEmployee", fields: [redeemedById], references: [id])
+  createdAt         DateTime         @default(now())
 
   @@index([customerProfileId, status])
   @@index([status, expiresAt])
@@ -341,20 +348,20 @@ model Product {
 }
 
 model Order {
-  id                String      @id @default(cuid())
+  id                String          @id @default(cuid())
   customerProfileId String
   customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id])
   employeeId        String?
-  employee          User?       @relation("OrderEmployee", fields: [employeeId], references: [id])
-  source            OrderSource @default(MANUAL_EMPLOYEE)
-  status            OrderStatus @default(COMPLETED)
-  totalAmount       Decimal     @db.Decimal(10, 2)
+  employee          User?           @relation("OrderEmployee", fields: [employeeId], references: [id])
+  source            OrderSource     @default(MANUAL_EMPLOYEE)
+  status            OrderStatus     @default(COMPLETED)
+  totalAmount       Decimal         @db.Decimal(10, 2)
   paymentMethod     String?
-  externalReference String?     @unique // POS ticket/order id — enforces "same sale never earns points twice"
-  pointsEarned      Int         @default(0)
+  externalReference String?         @unique // POS ticket/order id — enforces "same sale never earns points twice"
+  pointsEarned      Int             @default(0)
   notes             String?
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   items OrderItem[]
 
@@ -380,17 +387,17 @@ model OrderItem {
 // ─────────────────────────────────────────────────────────────────────────
 
 model Referral {
-  id                    String         @id @default(cuid())
+  id                    String          @id @default(cuid())
   referrerId            String
   referrer              CustomerProfile @relation("Referrer", fields: [referrerId], references: [id])
-  refereeId             String         @unique
+  refereeId             String          @unique
   referee               CustomerProfile @relation("Referee", fields: [refereeId], references: [id])
   codeUsed              String
-  status                ReferralStatus @default(PENDING)
-  referrerPointsAwarded Int            @default(0)
-  refereePointsAwarded  Int            @default(0)
+  status                ReferralStatus  @default(PENDING)
+  referrerPointsAwarded Int             @default(0)
+  refereePointsAwarded  Int             @default(0)
   completedAt           DateTime?
-  createdAt             DateTime       @default(now())
+  createdAt             DateTime        @default(now())
 
   @@index([referrerId, status])
 }
