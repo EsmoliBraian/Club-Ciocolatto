@@ -17,14 +17,14 @@ export function StatTile({
 }) {
   return (
     <Card className={className}>
-      <CardContent className="flex items-start justify-between gap-3 py-4">
+      <CardContent className="flex items-start justify-between gap-3 py-5">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          <p className={cn("mt-1 font-heading text-2xl font-semibold tabular-nums")}>{value}</p>
-          {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className={cn("mt-1.5 font-heading text-3xl font-bold tabular-nums text-foreground")}>{value}</p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
-          <Icon className="size-4.5" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+          <Icon className="size-5" />
         </div>
       </CardContent>
     </Card>

@@ -16,6 +16,7 @@ import {
   Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
 
 export const ADMIN_NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -44,11 +45,13 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
-              active ? "bg-secondary text-primary" : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
+              "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              active
+                ? "bg-cc-cream-50 text-cc-green-800"
+                : "text-cc-cream-200 hover:bg-cc-cream-50/10 hover:text-cc-cream-50"
             )}
           >
-            <item.icon className="size-4" />
+            <item.icon className="size-4 shrink-0" />
             {item.label}
           </Link>
         );
@@ -59,11 +62,14 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
 export function AdminSidebar() {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card px-3 py-4 md:flex">
-      <Link href="/admin" className="mb-6 px-2 font-heading text-lg font-semibold text-cc-green-800">
-        Club Ciocolatto
+    <aside className="hidden w-64 shrink-0 flex-col bg-cc-green-900 px-3 py-4 md:flex">
+      <Link href="/admin" className="mb-6 px-3 font-heading text-xl font-semibold text-cc-gold-400 italic">
+        Ciocolatto
       </Link>
       <AdminNavLinks />
+      <div className="mt-2 border-t border-cc-cream-50/10 pt-2">
+        <LogoutMenuRow variant="dark" />
+      </div>
     </aside>
   );
 }

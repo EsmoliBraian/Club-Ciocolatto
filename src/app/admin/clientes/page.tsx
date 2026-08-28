@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import { Download, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -60,25 +62,26 @@ export default async function CustomersAdminPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const exportParams = new URLSearchParams({ ...(q ? { q } : {}), ...(tierSlug ? { tier: tierSlug } : {}) });
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-semibold">Clientes</h1>
         <div className="flex items-center gap-3">
-          <p className="text-sm text-muted-foreground">{total} clientes</p>
+          <p className="text-sm font-medium text-muted-foreground">{total} clientes</p>
           <ScanCustomerButton />
         </div>
       </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/admin/clientes">
-        <Input name="q" defaultValue={q} placeholder="Buscar por nombre, email o teléfono" className="max-w-xs" />
+        <Input name="q" defaultValue={q} placeholder="Buscar cliente..." className="max-w-xs" />
         <Select name="tier" defaultValue={tierSlug ?? "all"}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Todos los niveles" />
+            <SelectValue placeholder="Nivel" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos los niveles</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {tiers.map((t) => (
               <SelectItem key={t.id} value={t.slug}>
                 {t.name}
@@ -89,41 +92,62 @@ export default async function CustomersAdminPage({
         <Button type="submit" variant="secondary">
           Buscar
         </Button>
+        <Button type="button" variant="outline" className="ml-auto" render={<a href={`/api/admin/customers/export?${exportParams}`} />}>
+          <Download className="size-4" />
+          Exportar
+        </Button>
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Cliente</TableHead>
               <TableHead>Nivel</TableHead>
               <TableHead>Puntos</TableHead>
               <TableHead>Última compra</TableHead>
               <TableHead>Total gastado</TableHead>
               <TableHead>Visitas</TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {customers.map((c) => (
-              <TableRow key={c.id} className="cursor-pointer">
-                <TableCell className="font-medium">
-                  <Link href={`/admin/clientes/${c.id}`} className="hover:underline">
-                    {c.user.firstName} {c.user.lastName}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{c.user.email}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{c.tier?.name ?? "Amigo Ciocolatto"}</Badge>
-                </TableCell>
-                <TableCell>{c.pointsBalance}</TableCell>
-                <TableCell className="text-muted-foreground">
-                  {c.lastOrderAt ? formatDateTime(c.lastOrderAt) : "—"}
-                </TableCell>
-                <TableCell>{formatCurrency(Number(c.totalSpent))}</TableCell>
-                <TableCell>{c.totalOrders}</TableCell>
-              </TableRow>
-            ))}
+            {customers.map((c) => {
+              const initials = `${c.user.firstName[0]}${c.user.lastName[0] ?? ""}`.toUpperCase();
+              return (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    <Link href={`/admin/clientes/${c.id}`} className="flex items-center gap-3">
+                      <Avatar className="size-8">
+                        <AvatarFallback className="bg-cc-green-800 text-xs text-cc-cream-50">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium text-foreground hover:underline">
+                          {c.user.firstName} {c.user.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{c.user.email}</p>
+                      </div>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{c.tier?.name ?? "Amigo Ciocolatto"}</Badge>
+                  </TableCell>
+                  <TableCell className="font-medium">{c.pointsBalance}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {c.lastOrderAt ? formatDateTime(c.lastOrderAt) : "—"}
+                  </TableCell>
+                  <TableCell>{formatCurrency(Number(c.totalSpent))}</TableCell>
+                  <TableCell>{c.totalOrders}</TableCell>
+                  <TableCell>
+                    <Link href={`/admin/clientes/${c.id}`}>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
         {customers.length === 0 && (
