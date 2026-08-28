@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { ScanCustomerButton } from "@/components/admin/scan-customer";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -64,7 +65,10 @@ export default async function CustomersAdminPage({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-2xl font-semibold">Clientes</h1>
-        <p className="text-sm text-muted-foreground">{total} clientes</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{total} clientes</p>
+          <ScanCustomerButton />
+        </div>
       </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/admin/clientes">

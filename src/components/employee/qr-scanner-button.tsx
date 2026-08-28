@@ -1,87 +1,73 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import QrScanner from "qr-scanner";
 import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-declare global {
-  interface Window {
-    BarcodeDetector?: new (options: { formats: string[] }) => {
-      detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]>;
-    };
-  }
-}
+// Served from public/ (copied from node_modules/qr-scanner) so the worker
+// loads reliably regardless of how the bundler resolves the library's own
+// dynamic import — Next.js/Turbopack has had inconsistent luck with that.
+QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js";
 
 /**
- * Progressive enhancement over the manual code field: uses the native
- * BarcodeDetector API (Chrome/Edge/Android) when available. Degrades to
- * nothing (button hidden) on browsers without support — manual entry always
- * works regardless.
+ * Cross-browser camera QR scanner (works on Safari/iOS too, unlike the native
+ * BarcodeDetector API this used to rely on). Degrades to nothing if the
+ * device has no camera or the user denies permission — manual entry in the
+ * parent form always works regardless.
  */
 export function QrScannerButton({ onDetected }: { onDetected: (value: string) => void }) {
-  const [supported, setSupported] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
 
   useEffect(() => {
-    // Feature detection must run post-mount: `window` isn't available during
-    // SSR, so this can't be computed synchronously without a hydration mismatch.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setSupported("BarcodeDetector" in window);
-  }, []);
+    if (!scanning || !videoRef.current) return;
 
-  useEffect(() => {
-    if (!scanning) return;
-    let cancelled = false;
-    const detector = new window.BarcodeDetector!({ formats: ["qr_code"] });
+    const scanner = new QrScanner(
+      videoRef.current,
+      (result) => {
+        onDetected(result.data);
+        setScanning(false);
+      },
+      {
+        preferredCamera: "environment",
+        highlightScanRegion: true,
+        highlightCodeOutline: true,
+        onDecodeError: () => {
+          // expected continuously while no code is in frame — not a real error
+        },
+      }
+    );
+    scannerRef.current = scanner;
 
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: "environment" } })
-      .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          void videoRef.current.play();
-        }
-
-        const tick = async () => {
-          if (cancelled || !videoRef.current) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes[0]) {
-              onDetected(codes[0].rawValue);
-              setScanning(false);
-              return;
-            }
-          } catch {
-            // transient decode errors are expected between frames
-          }
-          requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-      })
-      .catch(() => setScanning(false));
+    scanner.start().catch(() => {
+      setError("No pudimos acceder a la cámara. Revisá los permisos del navegador.");
+      setScanning(false);
+    });
 
     return () => {
-      cancelled = true;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      scanner.destroy();
+      scannerRef.current = null;
     };
   }, [scanning, onDetected]);
 
-  if (!supported) return null;
-
   return (
     <>
-      <Button type="button" variant="outline" onClick={() => setScanning(true)} className="w-full">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => {
+          setError(null);
+          setScanning(true);
+        }}
+        className="w-full"
+      >
         <Camera className="size-4" />
         Escanear con cámara
       </Button>
+      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
 
       {scanning && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/90 p-6">

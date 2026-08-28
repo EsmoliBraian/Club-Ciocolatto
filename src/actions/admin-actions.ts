@@ -7,8 +7,6 @@ import { recordAuditLog } from "@/server/services/audit-service";
 import { notify } from "@/server/services/notification-service";
 import { generateRedemptionCode, generateApiKey } from "@/lib/codes";
 import { hashApiKey } from "@/lib/api-auth";
-
-const API_KEY_SCOPES = ["orders:write", "customers:read", "customers:write", "refunds:write"] as const;
 import {
   tierSchema,
   missionSchema,
@@ -17,6 +15,30 @@ import {
   productSchema,
   loyaltyConfigSchema,
 } from "@/schemas/admin";
+
+const API_KEY_SCOPES = ["orders:write", "customers:read", "customers:write", "refunds:write"] as const;
+
+/** Resolves a scanned QR token / typed email / typed phone to a customer, for the admin "Escanear QR" shortcut. */
+export async function findCustomerIdByQueryAction(
+  query: string
+): Promise<{ id: string } | { error: string }> {
+  await requireRole(...ADMIN_ROLES);
+  const trimmed = query.trim();
+  if (!trimmed) return { error: "Ingresá un código QR, email o teléfono." };
+
+  const profile = await prisma.customerProfile.findFirst({
+    where: {
+      OR: [
+        { qrToken: trimmed },
+        { user: { email: trimmed.toLowerCase() } },
+        { user: { phone: trimmed } },
+      ],
+    },
+    select: { id: true },
+  });
+  if (!profile) return { error: "No encontramos a ese cliente." };
+  return { id: profile.id };
+}
 
 export interface ActionState {
   error?: string;
