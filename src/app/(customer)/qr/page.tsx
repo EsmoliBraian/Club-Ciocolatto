@@ -19,18 +19,18 @@ export default async function QrPage() {
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center gap-6 px-4 pt-10 text-center">
       <div>
-        <h1 className="font-heading text-xl font-semibold text-cc-cream-50">Pagá y sumá puntos</h1>
-        <p className="mx-auto mt-1 max-w-xs text-sm text-cc-cream-200">
+        <h1 className="font-heading text-xl font-semibold text-foreground">Pagá y sumá puntos</h1>
+        <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
           Mostrá este código en caja para escanear y sumar puntos por tu compra.
         </p>
       </div>
 
-      <div className="w-full max-w-xs rounded-3xl bg-cc-cream-50 p-6 shadow-[0_12px_32px_rgba(18,40,26,0.3)]">
+      <div className="w-full max-w-xs rounded-3xl border border-border bg-card p-6 shadow-[0_12px_32px_rgba(30,40,34,0.12)]">
         <div className="flex flex-col items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} alt="Tu código QR de Club Ciocolatto" className="size-56 rounded-xl" />
           <div>
-            <p className="font-heading text-lg font-semibold text-cc-green-900">
+            <p className="font-heading text-lg font-semibold text-foreground">
               {profile.user.firstName} {profile.user.lastName}
             </p>
             <p className="text-sm text-muted-foreground">{profile.pointsBalance} puntos</p>

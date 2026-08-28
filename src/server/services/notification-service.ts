@@ -44,3 +44,11 @@ export async function notify(input: NotifyInput, db: Db = prisma) {
 
   return notification;
 }
+
+export async function listRecentNotifications(userId: string, limit = 50, db: Db = prisma) {
+  return db.notification.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}

@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/select";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ScanCustomerButton } from "@/components/admin/scan-customer";
+import { CreateCustomerDialog } from "@/components/admin/create-customer-dialog";
+import { StatTile } from "@/components/admin/stat-tile";
+import { Users, UserCheck, UserPlus } from "lucide-react";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -33,6 +36,15 @@ export default async function CustomersAdminPage({
   const tierSlug = params.tier;
 
   const tiers = await prisma.loyaltyTier.findMany({ orderBy: { displayOrder: "asc" } });
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const activeSince = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const [totalCustomers, activeCustomers, newThisMonth] = await Promise.all([
+    prisma.customerProfile.count(),
+    prisma.customerProfile.count({ where: { lastOrderAt: { gte: activeSince } } }),
+    prisma.customerProfile.count({ where: { createdAt: { gte: startOfMonth } } }),
+  ]);
 
   const where: Prisma.CustomerProfileWhereInput = {
     ...(q
@@ -66,12 +78,21 @@ export default async function CustomersAdminPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-2xl font-semibold">Clientes</h1>
-        <div className="flex items-center gap-3">
-          <p className="text-sm font-medium text-muted-foreground">{total} clientes</p>
-          <ScanCustomerButton />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold text-foreground">Clientes</h1>
+          <p className="text-sm text-muted-foreground">Gestioná los clientes del programa de membresía.</p>
         </div>
+        <div className="flex items-center gap-2">
+          <ScanCustomerButton />
+          <CreateCustomerDialog />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatTile label="Total de clientes" value={totalCustomers.toLocaleString("es-AR")} icon={Users} />
+        <StatTile label="Clientes activos" value={activeCustomers.toLocaleString("es-AR")} icon={UserCheck} hint="Últimos 30 días" />
+        <StatTile label="Nuevos este mes" value={newThisMonth.toLocaleString("es-AR")} icon={UserPlus} />
       </div>
 
       <form className="flex flex-wrap items-center gap-2" action="/admin/clientes">

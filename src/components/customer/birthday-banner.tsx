@@ -27,8 +27,8 @@ export function BirthdayBanner({ favoriteDrink }: { favoriteDrink?: string | nul
   return (
     <div className="flex items-center justify-between gap-3 rounded-2xl border border-cc-gold-400/40 bg-cc-gold-400/10 px-4 py-3">
       <div>
-        <p className="font-heading text-sm font-semibold text-cc-cream-50">🎂 ¡Feliz cumpleaños!</p>
-        <p className="text-xs text-cc-cream-200">Tenés un {drink} gratis esperándote.</p>
+        <p className="font-heading text-sm font-semibold text-cc-green-900">🎂 ¡Feliz cumpleaños!</p>
+        <p className="text-xs text-cc-green-800/80">Tenés un {drink} gratis esperándote.</p>
       </div>
       <Button size="sm" onClick={claim} disabled={pending} className="bg-cc-gold-400 text-cc-green-900 hover:bg-cc-gold-300">
         {pending ? "Reclamando…" : "Reclamar"}

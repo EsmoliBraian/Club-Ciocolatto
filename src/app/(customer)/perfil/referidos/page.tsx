@@ -19,7 +19,7 @@ export default async function ReferralsPage() {
     <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pt-6">
       <BackHeader title="Invitá amigos" />
 
-      <div className="flex flex-col gap-3 rounded-2xl bg-cc-cream-50 p-5">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5">
         <p className="text-sm text-muted-foreground">Compartí Ciocolatto y ganen puntos juntos.</p>
         <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-2.5">
           <span className="font-heading font-semibold tracking-wide text-cc-green-900">{profile.referralCode}</span>

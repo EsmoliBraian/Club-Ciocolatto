@@ -44,7 +44,7 @@ export default async function CustomerHomePage() {
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-semibold text-cc-cream-50">
+        <h1 className="font-heading text-xl font-semibold text-foreground">
           Hola, {profile.user.firstName} 👋
         </h1>
         <Avatar className="size-10">
@@ -57,7 +57,7 @@ export default async function CustomerHomePage() {
       <TierProgressCard pointsBalance={profile.pointsBalance} progress={progress} />
 
       {nextBenefit && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-cc-cream-50 p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
               <Coffee className="size-5" />
@@ -91,8 +91,8 @@ export default async function CustomerHomePage() {
       {activeMissions.length > 0 && (
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center justify-between">
-            <p className="font-heading font-semibold text-cc-cream-50">Misiones activas</p>
-            <Link href="/misiones" className="text-xs font-medium text-cc-gold-300 hover:underline">
+            <p className="font-heading font-semibold text-foreground">Misiones activas</p>
+            <Link href="/misiones" className="text-xs font-medium text-primary hover:underline">
               Ver todas
             </Link>
           </div>

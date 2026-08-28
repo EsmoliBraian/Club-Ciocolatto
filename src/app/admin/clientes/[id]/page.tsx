@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getPointsHistory } from "@/server/services/loyalty-service";
 import { listActiveRewards } from "@/server/services/reward-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { AdjustPointsForm } from "@/components/employee/adjust-points-form";
 import { GrantRewardForm } from "@/components/admin/grant-reward-form";
 import { formatCurrency, formatDateTime } from "@/lib/format";
@@ -44,17 +46,27 @@ export default async function CustomerAdminDetailPage({ params }: { params: Prom
 
   return (
     <div className="flex flex-col gap-5">
-      <Card className="bg-cc-green-800 text-cc-cream-50">
+      <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 py-5">
-          <div>
-            <p className="font-heading text-xl font-semibold">
-              {profile.user.firstName} {profile.user.lastName}
-            </p>
-            <p className="text-sm text-cc-gold-300">{profile.tier?.name ?? "Amigo Ciocolatto"}</p>
-            <p className="text-xs text-cc-cream-200">{profile.user.email}</p>
+          <div className="flex items-center gap-3">
+            <Avatar className="size-12">
+              <AvatarFallback className="bg-cc-green-800 font-heading text-base text-cc-cream-50">
+                {profile.user.firstName[0]}
+                {profile.user.lastName[0] ?? ""}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-heading text-lg font-semibold text-foreground">
+                {profile.user.firstName} {profile.user.lastName}
+              </p>
+              <div className="mt-0.5 flex items-center gap-2">
+                <Badge variant="secondary">{profile.tier?.name ?? "Amigo Ciocolatto"}</Badge>
+                <p className="text-xs text-muted-foreground">{profile.user.email}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-2xl font-bold">
-            <Star className="size-6 fill-cc-gold-400 text-cc-gold-400" />
+          <div className="flex items-center gap-1.5 rounded-xl bg-secondary px-4 py-2 text-2xl font-bold text-primary">
+            <Star className="size-5 fill-cc-gold-400 text-cc-gold-400" />
             {profile.pointsBalance}
           </div>
         </CardContent>

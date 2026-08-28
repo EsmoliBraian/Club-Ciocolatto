@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   Package,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
@@ -45,10 +46,10 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150",
               active
-                ? "bg-cc-cream-50 text-cc-green-800"
-                : "text-cc-cream-200 hover:bg-cc-cream-50/10 hover:text-cc-cream-50"
+                ? "bg-cc-green-800 text-cc-cream-50 shadow-sm"
+                : "text-foreground/70 hover:bg-cc-green-soft/20 hover:text-foreground"
             )}
           >
             <item.icon className="size-4 shrink-0" />
@@ -60,15 +61,46 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export function AdminSidebar() {
+function BrandMark() {
   return (
-    <aside className="hidden w-64 shrink-0 flex-col bg-cc-green-900 px-3 py-4 md:flex">
-      <Link href="/admin" className="mb-6 px-3 font-logo text-xl font-semibold text-cc-gold-400 italic">
-        Ciocolatto
-      </Link>
+    <Link href="/admin" className="mb-1 flex items-center gap-2 px-2">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cc-green-800 font-logo text-sm text-cc-cream-50 italic">
+        C
+      </span>
+      <span className="font-logo text-lg text-foreground italic">Ciocolatto</span>
+    </Link>
+  );
+}
+
+function DownloadAppCard() {
+  return (
+    <Link
+      href="/"
+      className="flex items-center gap-3 rounded-xl bg-cc-cream-200 p-3 text-left transition-colors hover:bg-cc-green-soft/25"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-cc-green-800 text-cc-cream-50">
+        <Smartphone className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-xs font-semibold text-foreground">Descargá nuestra App</span>
+        <span className="block truncate text-[11px] text-muted-foreground">Disponible en iOS y Android</span>
+      </span>
+    </Link>
+  );
+}
+
+export function AdminSidebar({ userName, userRole }: { userName: string; userRole: string }) {
+  return (
+    <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-border bg-card px-3 py-5 md:flex">
+      <BrandMark />
+      <div className="px-2">
+        <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
+        <p className="text-xs text-muted-foreground">{userRole}</p>
+      </div>
       <AdminNavLinks />
-      <div className="mt-2 border-t border-cc-cream-50/10 pt-2">
-        <LogoutMenuRow variant="dark" />
+      <DownloadAppCard />
+      <div className="border-t border-border pt-2">
+        <LogoutMenuRow variant="light" />
       </div>
     </aside>
   );

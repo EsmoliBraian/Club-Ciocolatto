@@ -42,19 +42,15 @@ export default async function MissionsPage() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
-      <h1 className="font-heading text-xl font-semibold text-cc-cream-50">Misiones</h1>
+      <h1 className="font-heading text-xl font-semibold text-foreground">Misiones</h1>
 
       {all.length === 0 ? (
         <EmptyState />
       ) : (
         <Tabs defaultValue="activas">
-          <TabsList className="bg-cc-cream-50/10">
-            <TabsTrigger value="activas" className="data-active:bg-cc-cream-50">
-              Activas
-            </TabsTrigger>
-            <TabsTrigger value="completadas" className="data-active:bg-cc-cream-50">
-              Completadas
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="activas">Activas</TabsTrigger>
+            <TabsTrigger value="completadas">Completadas</TabsTrigger>
           </TabsList>
           <TabsContent value="activas" className="mt-3 flex flex-col gap-2.5">
             {active.length === 0 ? (
@@ -102,9 +98,9 @@ export default async function MissionsPage() {
 
 function EmptyState({ label }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl bg-cc-cream-50 py-12 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card py-12 text-center">
       <Trophy className="size-8 text-muted-foreground" />
-      <p className="font-medium text-cc-green-900">{label ?? "Todavía no tenés misiones activas."}</p>
+      <p className="font-medium text-foreground">{label ?? "Todavía no tenés misiones activas."}</p>
       {!label && <p className="text-sm text-muted-foreground">Volvé pronto. ☕</p>}
     </div>
   );

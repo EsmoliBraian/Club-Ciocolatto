@@ -7,7 +7,13 @@ import { recordAuditLog } from "@/server/services/audit-service";
 import { grantFreeReward } from "@/server/services/reward-service";
 import { generateApiKey } from "@/lib/codes";
 import { hashApiKey } from "@/lib/api-auth";
+import { hashPassword } from "@/lib/password";
+import { generateUniqueReferralCode, generateUniqueQrToken } from "@/server/services/customer-service";
+import { getLoyaltyConfig } from "@/server/services/config-service";
+import { awardPoints } from "@/server/services/loyalty-service";
+import { randomBytes } from "crypto";
 import {
+  createCustomerSchema,
   tierSchema,
   missionSchema,
   rewardSchema,
@@ -38,6 +44,98 @@ export async function findCustomerIdByQueryAction(
   });
   if (!profile) return { error: "No encontramos a ese cliente." };
   return { id: profile.id };
+}
+
+export interface CreateCustomerState {
+  error?: string;
+  fieldErrors?: Record<string, string[] | undefined>;
+  success?: boolean;
+  tempPassword?: string;
+  customerId?: string;
+}
+
+/** Manual enrollment for a walk-in customer — same identity/loyalty setup as self-registration, minus the password (the admin hands over a generated temp password). */
+export async function createCustomerAction(
+  _prev: CreateCustomerState,
+  formData: FormData
+): Promise<CreateCustomerState> {
+  const actor = await requireRole(...ADMIN_ROLES);
+
+  const parsed = createCustomerSchema.safeParse({
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    email: formData.get("email"),
+    phone: formData.get("phone"),
+    birthDate: formData.get("birthDate") || undefined,
+    favoriteDrink: formData.get("favoriteDrink") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ email: parsed.data.email }, { phone: parsed.data.phone }] },
+  });
+  if (existing) return { error: "Ya existe una cuenta con ese email o teléfono." };
+
+  const tempPassword = `${randomBytes(6).toString("base64url")}Aa1!`;
+  const passwordHash = await hashPassword(tempPassword);
+  const config = await getLoyaltyConfig();
+
+  const profile = await prisma.$transaction(async (tx) => {
+    const referralCode = await generateUniqueReferralCode(tx, parsed.data.firstName);
+    const qrToken = await generateUniqueQrToken(tx);
+
+    const user = await tx.user.create({
+      data: {
+        email: parsed.data.email,
+        phone: parsed.data.phone,
+        passwordHash,
+        role: "CUSTOMER",
+        firstName: parsed.data.firstName,
+        lastName: parsed.data.lastName,
+        birthDate: parsed.data.birthDate,
+        favoriteDrink: parsed.data.favoriteDrink,
+        acceptedTermsAt: new Date(),
+      },
+    });
+
+    const created = await tx.customerProfile.create({
+      data: { userId: user.id, referralCode, qrToken },
+    });
+
+    if (config.registrationPoints > 0) {
+      await awardPoints(
+        {
+          customerProfileId: created.id,
+          type: "EARN",
+          source: "REGISTRATION",
+          amount: config.registrationPoints,
+          description: "Bienvenida al Club Ciocolatto",
+          referenceType: "User",
+          referenceId: user.id,
+          silent: true,
+        },
+        tx
+      );
+    }
+
+    await recordAuditLog(
+      {
+        actorId: actor.id,
+        action: "CUSTOMER_CREATED_BY_ADMIN",
+        entityType: "User",
+        entityId: user.id,
+        changes: { email: parsed.data.email, firstName: parsed.data.firstName, lastName: parsed.data.lastName },
+      },
+      tx
+    );
+
+    return created;
+  });
+
+  revalidatePath("/admin/clientes");
+  return { success: true, tempPassword, customerId: profile.id };
 }
 
 export interface ActionState {

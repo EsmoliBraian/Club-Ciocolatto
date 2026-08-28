@@ -38,14 +38,14 @@ export function BottomNav() {
 
   return (
     <nav className="safe-bottom sticky bottom-0 z-40 px-4 pb-3 sm:hidden">
-      <div className="relative flex items-end justify-between rounded-[28px] bg-cc-cream-50 px-2 pt-2 pb-1 shadow-[0_8px_24px_rgba(18,40,26,0.25)]">
+      <div className="relative flex items-end justify-between rounded-[28px] border border-border bg-card px-2 pt-2 pb-1 shadow-[0_8px_24px_rgba(30,40,34,0.1)]">
         {SIDE_ITEMS.map((item) => (
           <NavIcon key={item.href} {...item} active={pathname === item.href} />
         ))}
 
         <Link
           href={QR_ITEM.href}
-          className="relative -top-5 mx-1 flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-cc-green-800 text-cc-cream-50 ring-4 ring-cc-cream-100 transition-transform active:scale-95"
+          className="relative -top-5 mx-1 flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-cc-green-800 text-cc-cream-50 ring-4 ring-background transition-transform active:scale-95"
         >
           <QrCode className="size-6 text-cc-gold-400" />
           <span className="mt-0.5 text-[9px] font-semibold tracking-wide">QR</span>
@@ -64,9 +64,9 @@ export function DesktopNav() {
   const items = [...SIDE_ITEMS, QR_ITEM, ...SIDE_ITEMS_RIGHT];
 
   return (
-    <nav className="hidden border-b border-cc-cream-50/10 bg-cc-green-900 sm:block">
+    <nav className="hidden border-b border-border bg-card sm:block">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <Link href="/inicio" className="font-logo text-lg font-semibold text-cc-cream-50 italic">
+        <Link href="/inicio" className="font-logo text-lg font-semibold text-foreground italic">
           Club Ciocolatto
         </Link>
         <ul className="flex items-center gap-1">
@@ -78,7 +78,7 @@ export function DesktopNav() {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
-                    active ? "bg-cc-cream-50/10 text-cc-gold-400" : "text-cc-cream-200 hover:text-cc-cream-50"
+                    active ? "bg-secondary text-primary" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <item.icon className="size-4" />

@@ -28,8 +28,8 @@ export default async function RedeemPage() {
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-semibold text-cc-cream-50">Canjear puntos</h1>
-        <div className="flex items-center gap-1.5 rounded-full bg-cc-cream-50/10 px-3 py-1 text-sm font-semibold text-cc-gold-300">
+        <h1 className="font-heading text-xl font-semibold text-foreground">Canjear puntos</h1>
+        <div className="flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-primary">
           <Star className="size-3.5 fill-cc-gold-400 text-cc-gold-400" />
           {profile.pointsBalance} pts
         </div>
@@ -39,16 +39,10 @@ export default async function RedeemPage() {
         <EmptyState />
       ) : (
         <Tabs defaultValue="todos">
-          <TabsList className="bg-cc-cream-50/10">
-            <TabsTrigger value="todos" className="data-active:bg-cc-cream-50">
-              Todos
-            </TabsTrigger>
-            <TabsTrigger value="productos" className="data-active:bg-cc-cream-50">
-              Productos
-            </TabsTrigger>
-            <TabsTrigger value="descuentos" className="data-active:bg-cc-cream-50">
-              Descuentos
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="todos">Todos</TabsTrigger>
+            <TabsTrigger value="productos">Productos</TabsTrigger>
+            <TabsTrigger value="descuentos">Descuentos</TabsTrigger>
           </TabsList>
           <TabsContent value="todos" className="mt-3">
             <RewardGrid items={rewards} pointsBalance={profile.pointsBalance} />
@@ -75,11 +69,11 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
       {items.map(({ reward, eligible, reason }) => (
         <div
           key={reward.id}
-          className={`flex flex-col gap-2 rounded-2xl bg-cc-cream-50 p-3.5 shadow-sm ${!eligible ? "opacity-60" : ""}`}
+          className={`flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm ${!eligible ? "opacity-60" : ""}`}
         >
           <span className="text-2xl">{reward.icon ?? "🎁"}</span>
           <div className="min-h-8">
-            <p className="font-medium leading-tight text-cc-green-900">{reward.name}</p>
+            <p className="font-medium leading-tight text-foreground">{reward.name}</p>
             {reward.category === "PRODUCT" && (
               <p className="text-xs font-semibold text-cc-gold-400">GRATIS</p>
             )}
@@ -106,9 +100,9 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
 
 function EmptyState({ label }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-2xl bg-cc-cream-50 py-12 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card py-12 text-center">
       <Gift className="size-8 text-muted-foreground" />
-      <p className="font-medium text-cc-green-900">
+      <p className="font-medium text-foreground">
         {label ?? "Seguí sumando puntos para desbloquear nuevos beneficios."}
       </p>
     </div>

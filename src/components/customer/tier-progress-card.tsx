@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { TierProgress } from "@/server/services/tier-service";
 import { CircularProgress } from "@/components/customer/circular-progress";
 
@@ -11,8 +12,8 @@ export function TierProgressCard({
   const { currentTier, nextTier, pointsToNextTier, progressPct } = progress;
 
   return (
-    <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <p className="text-sm font-medium text-cc-gold-300">
+    <div className="flex flex-col items-center gap-3 rounded-3xl bg-gradient-to-br from-cc-green-700 to-cc-green-900 px-6 py-7 text-center shadow-[0_16px_32px_-12px_rgba(20,42,28,0.45)]">
+      <p className="text-xs font-semibold tracking-wide text-cc-gold-300 uppercase">
         {currentTier?.icon} {currentTier?.name ?? "Amigo Ciocolatto"}
       </p>
 
@@ -33,6 +34,13 @@ export function TierProgressCard({
           "Estás en el nivel más alto del Club 🎉"
         )}
       </p>
+
+      <Link
+        href="/misiones"
+        className="mt-1 rounded-full bg-cc-cream-50/10 px-4 py-1.5 text-xs font-semibold text-cc-cream-50 transition-colors hover:bg-cc-cream-50/20"
+      >
+        Ver cómo sumar puntos
+      </Link>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function MissionCard({
   compact?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-cc-cream-50 p-3.5 shadow-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm">
       <span
         className={cn(
           "flex size-11 shrink-0 items-center justify-center rounded-full text-lg",

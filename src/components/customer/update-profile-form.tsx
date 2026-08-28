@@ -27,7 +27,7 @@ export function UpdateProfileForm({
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={submit} className="flex flex-col gap-3 rounded-2xl bg-cc-cream-50 p-4">
+    <form action={submit} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4">
       <div className="grid grid-cols-2 gap-3">
         <Field label="Nombre" name="firstName" defaultValue={user.firstName} required />
         <Field label="Apellido" name="lastName" defaultValue={user.lastName} required />

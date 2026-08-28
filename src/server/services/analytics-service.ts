@@ -135,6 +135,22 @@ export async function getTopCompletedMissions(limit = 5) {
   }));
 }
 
+export async function getRecentRedemptions(limit = 6) {
+  const redemptions = await prisma.rewardRedemption.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    include: { reward: true, customerProfile: { include: { user: true } } },
+  });
+  return redemptions.map((r) => ({
+    id: r.id,
+    customerName: `${r.customerProfile.user.firstName} ${r.customerProfile.user.lastName}`,
+    rewardName: r.reward.name,
+    pointsSpent: r.pointsSpent,
+    status: r.status,
+    createdAt: r.createdAt,
+  }));
+}
+
 function bucketByDay(dates: Date[], days: number) {
   const buckets = new Map<string, number>();
   for (let i = days - 1; i >= 0; i--) {

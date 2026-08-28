@@ -17,12 +17,16 @@
   --color-cc-green-900: var(--cc-green-900);
   --color-cc-green-800: var(--cc-green-800);
   --color-cc-green-700: var(--cc-green-700);
+  --color-cc-green-600: var(--cc-green-600);
+  --color-cc-green-soft: var(--cc-green-soft);
   --color-cc-cream-50: var(--cc-cream-50);
   --color-cc-cream-100: var(--cc-cream-100);
   --color-cc-cream-200: var(--cc-cream-200);
   --color-cc-beige-300: var(--cc-beige-300);
   --color-cc-gold-300: var(--cc-gold-300);
   --color-cc-gold-400: var(--cc-gold-400);
+  --color-cc-warning: var(--cc-warning);
+  --color-cc-info: var(--cc-info);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -62,83 +66,54 @@
 }
 
 :root {
-  /* Ciocolatto brand palette — fixed reference values */
-  --cc-green-900: #12281a;
-  --cc-green-800: #1c4328;
-  --cc-green-700: #2a5a38;
-  --cc-cream-50: #fffdf7;
-  --cc-cream-100: #faf3e4;
-  --cc-cream-200: #f1e6ce;
-  --cc-beige-300: #e4d3b0;
-  --cc-gold-300: #dfc589;
-  --cc-gold-400: #c89b3c;
+  /* Ciocolatto brand palette v2 — premium, warm, light-first.
+     Green is the brand/CTA color, not a background used everywhere. */
+  --cc-green-900: #142a1c; /* reserved: strongest emphasis / hero gradients only */
+  --cc-green-800: #1c4328; /* verde principal */
+  --cc-green-700: #285c3a; /* verde secundario */
+  --cc-green-600: #39754e; /* verde medio */
+  --cc-green-soft: #a8c3af; /* verde suave */
+  --cc-cream-50: #ffffff; /* superficie */
+  --cc-cream-100: #f7f6f0; /* fondo */
+  --cc-cream-200: #f0efe7; /* fondo secundario / hover sutil */
+  --cc-beige-300: #e8e7df; /* borde */
+  --cc-gold-300: #e2c98d; /* acento cálido suave (premium/tier) */
+  --cc-gold-400: #c89b3c; /* acento cálido (premium/tier) */
+  --cc-warning: #c9922f; /* warning — tono cálido discreto */
+  --cc-info: #7f909a; /* info — verde/gris azulado sutil */
 
   --background: var(--cc-cream-100);
-  --foreground: var(--cc-green-900);
+  --foreground: #1e2822;
   --card: var(--cc-cream-50);
-  --card-foreground: var(--cc-green-900);
+  --card-foreground: #1e2822;
   --popover: var(--cc-cream-50);
-  --popover-foreground: var(--cc-green-900);
+  --popover-foreground: #1e2822;
   --primary: var(--cc-green-800);
   --primary-foreground: var(--cc-cream-50);
   --secondary: var(--cc-cream-200);
   --secondary-foreground: var(--cc-green-800);
   --muted: var(--cc-cream-200);
-  --muted-foreground: #7a6f58;
-  --accent: var(--cc-gold-400);
+  --muted-foreground: #6f776f;
+  --accent: var(--cc-green-soft);
   --accent-foreground: var(--cc-green-900);
   --destructive: #b5482a;
   --border: var(--cc-beige-300);
   --input: var(--cc-beige-300);
-  --ring: var(--cc-green-700);
+  --ring: var(--cc-green-600);
   --chart-1: var(--cc-green-800);
   --chart-2: var(--cc-gold-400);
-  --chart-3: var(--cc-green-700);
+  --chart-3: var(--cc-green-600);
   --chart-4: var(--cc-beige-300);
-  --chart-5: #8a9b6e;
-  --radius: 1rem;
+  --chart-5: var(--cc-green-soft);
+  --radius: 0.875rem;
   --sidebar: var(--cc-cream-50);
-  --sidebar-foreground: var(--cc-green-900);
+  --sidebar-foreground: #1e2822;
   --sidebar-primary: var(--cc-green-800);
   --sidebar-primary-foreground: var(--cc-cream-50);
   --sidebar-accent: var(--cc-cream-200);
   --sidebar-accent-foreground: var(--cc-green-800);
   --sidebar-border: var(--cc-beige-300);
-  --sidebar-ring: var(--cc-green-700);
-}
-
-.dark {
-  --background: #10261a;
-  --foreground: var(--cc-cream-100);
-  --card: var(--cc-green-800);
-  --card-foreground: var(--cc-cream-100);
-  --popover: var(--cc-green-800);
-  --popover-foreground: var(--cc-cream-100);
-  --primary: var(--cc-gold-400);
-  --primary-foreground: var(--cc-green-900);
-  --secondary: #234f30;
-  --secondary-foreground: var(--cc-cream-100);
-  --muted: #234f30;
-  --muted-foreground: #c9be9f;
-  --accent: var(--cc-gold-400);
-  --accent-foreground: var(--cc-green-900);
-  --destructive: #d8674a;
-  --border: rgba(250, 243, 228, 0.12);
-  --input: rgba(250, 243, 228, 0.16);
-  --ring: var(--cc-gold-400);
-  --chart-1: var(--cc-gold-400);
-  --chart-2: var(--cc-cream-200);
-  --chart-3: var(--cc-green-700);
-  --chart-4: var(--cc-beige-300);
-  --chart-5: #8a9b6e;
-  --sidebar: var(--cc-green-900);
-  --sidebar-foreground: var(--cc-cream-100);
-  --sidebar-primary: var(--cc-gold-400);
-  --sidebar-primary-foreground: var(--cc-green-900);
-  --sidebar-accent: #234f30;
-  --sidebar-accent-foreground: var(--cc-cream-100);
-  --sidebar-border: rgba(250, 243, 228, 0.12);
-  --sidebar-ring: var(--cc-gold-400);
+  --sidebar-ring: var(--cc-green-600);
 }
 
 @layer base {

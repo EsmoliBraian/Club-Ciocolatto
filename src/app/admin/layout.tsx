@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { auth } from "@/lib/auth";
 import { ADMIN_ROLES } from "@/lib/rbac";
 import { AdminSidebar } from "@/components/admin/sidebar";
-import { AdminMobileNav } from "@/components/admin/mobile-nav";
+import { AdminHeader } from "@/components/admin/header";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -11,18 +11,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/login");
   }
 
+  const userName = `${session.user.firstName} ${session.user.lastName}`;
+  const userRole = session.user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin";
+
   return (
-    <div className="flex min-h-full flex-1 bg-cc-cream-100">
-      <AdminSidebar />
+    <div className="flex min-h-full flex-1 bg-background">
+      <AdminSidebar userName={userName} userRole={userRole} />
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-border bg-card px-3 py-3 sm:gap-3 sm:px-6">
-          <AdminMobileNav />
-          <p className="flex-1 truncate text-sm font-medium text-foreground">
-            {session.user.firstName} {session.user.lastName} ·{" "}
-            {session.user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin"}
-          </p>
-        </header>
-        <main className="flex-1 overflow-x-hidden px-6 py-6">{children}</main>
+        <AdminHeader userName={userName} userRole={userRole} />
+        <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>
   );

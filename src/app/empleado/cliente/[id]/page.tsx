@@ -5,6 +5,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { RegisterPurchaseForm } from "@/components/employee/register-purchase-form";
 import { AdjustPointsForm } from "@/components/employee/adjust-points-form";
 
@@ -24,15 +26,25 @@ export default async function EmployeeCustomerPage({ params }: { params: Promise
 
   return (
     <div className="flex flex-col gap-5">
-      <Card className="bg-cc-green-800 text-cc-cream-50">
-        <CardContent className="flex items-center justify-between py-5">
-          <div>
-            <p className="font-heading text-lg font-semibold">
-              {profile.user.firstName} {profile.user.lastName}
-            </p>
-            <p className="text-sm text-cc-gold-300">{profile.tier?.name ?? "Amigo Ciocolatto"}</p>
+      <Card>
+        <CardContent className="flex items-center justify-between gap-3 py-5">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-11">
+              <AvatarFallback className="bg-cc-green-800 font-heading text-cc-cream-50">
+                {profile.user.firstName[0]}
+                {profile.user.lastName[0] ?? ""}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-heading text-lg font-semibold text-foreground">
+                {profile.user.firstName} {profile.user.lastName}
+              </p>
+              <Badge variant="secondary" className="mt-0.5">
+                {profile.tier?.name ?? "Amigo Ciocolatto"}
+              </Badge>
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-xl font-bold">
+          <div className="flex items-center gap-1.5 rounded-xl bg-secondary px-3 py-1.5 text-xl font-bold text-primary">
             <Star className="size-5 fill-cc-gold-400 text-cc-gold-400" />
             {profile.pointsBalance}
           </div>

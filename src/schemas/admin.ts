@@ -1,4 +1,15 @@
 import { z } from "zod";
+import { FAVORITE_DRINK_OPTIONS } from "@/lib/constants";
+
+export const createCustomerSchema = z.object({
+  firstName: z.string().trim().min(2, "Ingresá el nombre"),
+  lastName: z.string().trim().min(2, "Ingresá el apellido"),
+  email: z.string().trim().toLowerCase().email("Ingresá un email válido"),
+  phone: z.string().trim().min(6, "Ingresá un teléfono válido").max(20, "Ingresá un teléfono válido"),
+  birthDate: z.coerce.date().max(new Date(), "Fecha inválida").optional(),
+  favoriteDrink: z.enum(FAVORITE_DRINK_OPTIONS).optional(),
+});
+export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
 
 export const tierSchema = z.object({
   name: z.string().trim().min(2),
