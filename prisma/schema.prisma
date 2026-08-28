@@ -1,0 +1,503 @@
+// Club Ciocolatto — Prisma schema
+// Decisions documented in docs/database.md and docs/loyalty-system.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  EMPLOYEE
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum PointTransactionType {
+  EARN
+  REDEEM
+  BONUS
+  REFUND
+  ADJUSTMENT
+  EXPIRATION
+}
+
+enum PointSource {
+  PURCHASE
+  REGISTRATION
+  FIRST_PURCHASE
+  BIRTHDAY
+  REFERRAL_SPONSOR
+  REFERRAL_REFEREE
+  MISSION
+  PROMOTION
+  MANUAL_ADMIN
+  REDEMPTION
+  REDEMPTION_CANCELLED
+}
+
+enum MissionType {
+  PURCHASE_COUNT
+  VISIT_COUNT
+  SPEND_AMOUNT
+  PRODUCT_PURCHASE
+  CATEGORY_PURCHASE
+  REFERRAL
+  SPECIAL_DATE
+  RAINY_DAY
+  CUSTOM
+}
+
+enum MissionProgressStatus {
+  IN_PROGRESS
+  COMPLETED
+  REWARD_CLAIMED
+  EXPIRED
+}
+
+enum RedemptionStatus {
+  PENDING
+  USED
+  EXPIRED
+  CANCELLED
+}
+
+enum ReferralStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+enum PromotionType {
+  POINTS_MULTIPLIER
+  BONUS_POINTS
+  DISCOUNT
+}
+
+enum NotificationType {
+  POINTS_EARNED
+  POINTS_REDEEMED
+  TIER_UPGRADED
+  MISSION_COMPLETED
+  REWARD_UNLOCKED
+  BIRTHDAY
+  REFERRAL_COMPLETED
+  GENERAL
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  WHATSAPP
+  PUSH
+}
+
+enum OrderSource {
+  MANUAL_EMPLOYEE
+  POS_INTEGRATION
+  ADMIN
+}
+
+enum OrderStatus {
+  COMPLETED
+  REFUNDED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Identity
+// ─────────────────────────────────────────────────────────────────────────
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  phone               String?   @unique
+  passwordHash        String
+  role                Role      @default(CUSTOMER)
+  firstName           String
+  lastName            String
+  birthDate           DateTime? @db.Date
+  avatarUrl           String?
+  active              Boolean   @default(true)
+  acceptedTermsAt     DateTime?
+  acceptedMarketingAt DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  customerProfile   CustomerProfile?
+  employeeOrders    Order[]            @relation("OrderEmployee")
+  auditLogs         AuditLog[]         @relation("AuditActor")
+  notifications     Notification[]
+  redeemedByEntries RewardRedemption[] @relation("RedeemedByEmployee")
+
+  @@index([role])
+}
+
+// One per CUSTOMER-role user. Kept separate from User so employee/admin
+// accounts never carry loyalty fields, and so the loyalty engine only ever
+// deals with a narrow, purpose-built shape.
+model CustomerProfile {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointsBalance  Int       @default(0) // spendable balance — reconstructable as SUM(PointTransaction.amount)
+  lifetimePoints Int       @default(0) // status/tier basis — never reduced by REDEEM or EXPIRATION
+  tierId         String?
+  tier           LoyaltyTier? @relation(fields: [tierId], references: [id])
+  qrToken        String    @unique // opaque, cryptographically random identifier embedded in the customer's QR (see src/lib/codes.ts)
+  referralCode   String    @unique
+  totalSpent     Decimal   @default(0) @db.Decimal(12, 2)
+  totalOrders    Int       @default(0)
+  firstOrderAt   DateTime?
+  lastOrderAt    DateTime?
+  birthdayRewardClaimedYear Int?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  pointTransactions PointTransaction[]
+  orders            Order[]
+  missionProgress   MissionProgress[]
+  redemptions       RewardRedemption[]
+  referralsSent     Referral[]         @relation("Referrer")
+  referralReceived  Referral?          @relation("Referee")
+
+  @@index([tierId])
+  @@index([lastOrderAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Loyalty core
+// ─────────────────────────────────────────────────────────────────────────
+
+model LoyaltyTier {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  minimumPoints Int
+  maximumPoints Int?
+  description   String?
+  benefits      Json // string[]
+  icon          String?
+  color         String?
+  displayOrder  Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customers CustomerProfile[]
+  rewards   Reward[]
+
+  @@index([displayOrder])
+}
+
+// Append-only ledger. Balances are never mutated directly — every change to
+// a customer's points is a row here, and pointsBalance/lifetimePoints on
+// CustomerProfile are a cache that must always equal what this table
+// recomputes. `amount` is signed (negative for redemptions/expirations) so
+// balance = SUM(amount).
+model PointTransaction {
+  id                 String               @id @default(cuid())
+  customerProfileId  String
+  customerProfile    CustomerProfile      @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  type               PointTransactionType
+  source             PointSource
+  amount             Int
+  balanceAfter       Int
+  description        String
+  referenceType      String? // e.g. "Order", "Mission", "RewardRedemption", "Referral"
+  referenceId        String?
+  metadata           Json?
+  createdById        String? // admin/employee who triggered a manual adjustment
+  createdAt          DateTime             @default(now())
+
+  @@index([customerProfileId, createdAt])
+  @@index([referenceType, referenceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Missions
+// ─────────────────────────────────────────────────────────────────────────
+
+model Mission {
+  id           String      @id @default(cuid())
+  name         String
+  description  String
+  icon         String?
+  type         MissionType
+  targetValue  Int
+  productId    String?
+  category     String?
+  rewardPoints Int         @default(0)
+  rewardId     String?
+  startAt      DateTime?
+  endAt        DateTime?
+  perUserLimit Int         @default(1) // times a customer may complete this mission (cycles)
+  segment      String? // segmentation key; null = all customers
+  active       Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  reward   Reward?           @relation(fields: [rewardId], references: [id])
+  product  Product?          @relation(fields: [productId], references: [id])
+  progress MissionProgress[]
+
+  @@index([active, startAt, endAt])
+}
+
+// One row per customer per mission "cycle" (cycleKey lets a monthly mission
+// like "visit 3 times this month" restart automatically: cycleKey = "2026-08").
+model MissionProgress {
+  id                 String                 @id @default(cuid())
+  missionId          String
+  mission            Mission                @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  customerProfileId  String
+  customerProfile    CustomerProfile        @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  currentValue       Int                    @default(0)
+  status             MissionProgressStatus  @default(IN_PROGRESS)
+  completedAt        DateTime?
+  claimedAt          DateTime?
+  cycleKey           String
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@unique([missionId, customerProfileId, cycleKey])
+  @@index([customerProfileId, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Rewards
+// ─────────────────────────────────────────────────────────────────────────
+
+model Reward {
+  id             String    @id @default(cuid())
+  name           String
+  description    String?
+  imageUrl       String?
+  pointsCost     Int
+  stock          Int? // null = unlimited
+  requiredTierId String?
+  requiredTier   LoyaltyTier? @relation(fields: [requiredTierId], references: [id])
+  perUserLimit   Int? // null = unlimited
+  validFrom      DateTime?
+  validUntil     DateTime?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  redemptions RewardRedemption[]
+  missions    Mission[]
+
+  @@index([active])
+}
+
+model RewardRedemption {
+  id                String            @id @default(cuid())
+  customerProfileId String
+  customerProfile   CustomerProfile   @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  rewardId          String
+  reward            Reward            @relation(fields: [rewardId], references: [id])
+  pointsSpent       Int
+  redemptionCode    String            @unique
+  status            RedemptionStatus  @default(PENDING)
+  expiresAt         DateTime?
+  redeemedAt        DateTime?
+  redeemedById      String?
+  redeemedBy        User?             @relation("RedeemedByEmployee", fields: [redeemedById], references: [id])
+  createdAt         DateTime          @default(now())
+
+  @@index([customerProfileId, status])
+  @@index([status, expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Catalog & orders
+// ─────────────────────────────────────────────────────────────────────────
+
+model Product {
+  id               String   @id @default(cuid())
+  name             String
+  category         String?
+  price            Decimal  @db.Decimal(10, 2)
+  active           Boolean  @default(true)
+  imageUrl         String?
+  pointsMultiplier Decimal  @default(1) @db.Decimal(4, 2)
+  bonusPoints      Int      @default(0)
+  externalSku      String?  @unique // POS product id, for future integration
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  orderItems OrderItem[]
+  missions   Mission[]
+  promotions Promotion[]
+
+  @@index([category])
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  customerProfileId String
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id])
+  employeeId        String?
+  employee          User?       @relation("OrderEmployee", fields: [employeeId], references: [id])
+  source            OrderSource @default(MANUAL_EMPLOYEE)
+  status            OrderStatus @default(COMPLETED)
+  totalAmount       Decimal     @db.Decimal(10, 2)
+  paymentMethod     String?
+  externalReference String?     @unique // POS ticket/order id — enforces "same sale never earns points twice"
+  pointsEarned      Int         @default(0)
+  notes             String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  items OrderItem[]
+
+  @@index([customerProfileId, createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  name      String // snapshot at time of sale
+  quantity  Int      @default(1)
+  unitPrice Decimal  @db.Decimal(10, 2)
+  subtotal  Decimal  @db.Decimal(10, 2)
+
+  @@index([orderId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Growth
+// ─────────────────────────────────────────────────────────────────────────
+
+model Referral {
+  id                    String         @id @default(cuid())
+  referrerId            String
+  referrer              CustomerProfile @relation("Referrer", fields: [referrerId], references: [id])
+  refereeId             String         @unique
+  referee               CustomerProfile @relation("Referee", fields: [refereeId], references: [id])
+  codeUsed              String
+  status                ReferralStatus @default(PENDING)
+  referrerPointsAwarded Int            @default(0)
+  refereePointsAwarded  Int            @default(0)
+  completedAt           DateTime?
+  createdAt             DateTime       @default(now())
+
+  @@index([referrerId, status])
+}
+
+model Promotion {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  type        PromotionType
+  multiplier  Decimal?      @db.Decimal(4, 2) // POINTS_MULTIPLIER
+  bonusPoints Int? // BONUS_POINTS
+  discountPct Decimal?      @db.Decimal(5, 2) // DISCOUNT
+  category    String? // null = all categories
+  productId   String?
+  product     Product?      @relation(fields: [productId], references: [id])
+  segment     String? // segmentation key; null = all customers
+  startAt     DateTime
+  endAt       DateTime
+  active      Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([active, startAt, endAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Platform
+// ─────────────────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  body      String
+  read      Boolean             @default(false)
+  metadata  Json?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, read, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action     String // e.g. ADMIN_ADDED_POINTS, REWARD_CREATED, CONFIG_UPDATED
+  entityType String
+  entityId   String?
+  changes    Json?
+  reason     String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+// Singleton row (id is always "singleton") holding every tunable of the
+// loyalty program so none of it is hardcoded in application code.
+model LoyaltyConfig {
+  id                        String   @id @default("singleton")
+  amountPerPoint            Decimal  @default(1000) @db.Decimal(10, 2) // $ spent per pointsPerAmount earned
+  pointsPerAmount           Decimal  @default(1) @db.Decimal(10, 4)
+  registrationPoints        Int      @default(30)
+  firstPurchasePoints       Int      @default(50)
+  birthdayPoints            Int      @default(100)
+  referralSponsorPoints     Int      @default(50)
+  referralRefereePoints     Int      @default(100)
+  pointsExpireAfterDays     Int? // null = points never expire
+  redemptionCodeExpiryHours Int      @default(72)
+  businessName              String   @default("Ciocolatto")
+  logoUrl                   String?
+  contactEmail              String?
+  contactPhone              String?
+  instagramUrl              String?
+  updatedAt                 DateTime @updatedAt
+}
+
+// Credentials issued to the Ciocolatto POS for the future integration
+// endpoints (/api/integrations/*). Only the hash is stored.
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  hashedKey  String    @unique
+  keyPrefix  String // shown in the admin UI to identify the key, e.g. "cc_live_ab12"
+  scopes     Json // string[], e.g. ["orders:write", "customers:read", "refunds:write"]
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+
+  @@index([active])
+}
+
+// Generic idempotency store for integration endpoints beyond Order's own
+// externalReference uniqueness (e.g. refunds), keyed by the caller-supplied
+// Idempotency-Key header.
+model IdempotencyKey {
+  id           String   @id @default(cuid())
+  key          String   @unique
+  endpoint     String
+  responseBody Json?
+  statusCode   Int?
+  createdAt    DateTime @default(now())
+
+  @@index([endpoint, createdAt])
+}

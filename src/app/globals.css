@@ -1,26 +1,166 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-fraunces);
+  /* Ciocolatto brand — fixed values usable regardless of light/dark theme,
+     e.g. the points hero card, which is always deep-green like a physical card. */
+  --color-cc-green-900: var(--cc-green-900);
+  --color-cc-green-800: var(--cc-green-800);
+  --color-cc-green-700: var(--cc-green-700);
+  --color-cc-cream-50: var(--cc-cream-50);
+  --color-cc-cream-100: var(--cc-cream-100);
+  --color-cc-cream-200: var(--cc-cream-200);
+  --color-cc-beige-300: var(--cc-beige-300);
+  --color-cc-gold-300: var(--cc-gold-300);
+  --color-cc-gold-400: var(--cc-gold-400);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Ciocolatto brand palette — fixed reference values */
+  --cc-green-900: #12281a;
+  --cc-green-800: #1c4328;
+  --cc-green-700: #2a5a38;
+  --cc-cream-50: #fffdf7;
+  --cc-cream-100: #faf3e4;
+  --cc-cream-200: #f1e6ce;
+  --cc-beige-300: #e4d3b0;
+  --cc-gold-300: #dfc589;
+  --cc-gold-400: #c89b3c;
+
+  --background: var(--cc-cream-100);
+  --foreground: var(--cc-green-900);
+  --card: var(--cc-cream-50);
+  --card-foreground: var(--cc-green-900);
+  --popover: var(--cc-cream-50);
+  --popover-foreground: var(--cc-green-900);
+  --primary: var(--cc-green-800);
+  --primary-foreground: var(--cc-cream-50);
+  --secondary: var(--cc-cream-200);
+  --secondary-foreground: var(--cc-green-800);
+  --muted: var(--cc-cream-200);
+  --muted-foreground: #7a6f58;
+  --accent: var(--cc-gold-400);
+  --accent-foreground: var(--cc-green-900);
+  --destructive: #b5482a;
+  --border: var(--cc-beige-300);
+  --input: var(--cc-beige-300);
+  --ring: var(--cc-green-700);
+  --chart-1: var(--cc-green-800);
+  --chart-2: var(--cc-gold-400);
+  --chart-3: var(--cc-green-700);
+  --chart-4: var(--cc-beige-300);
+  --chart-5: #8a9b6e;
+  --radius: 1rem;
+  --sidebar: var(--cc-cream-50);
+  --sidebar-foreground: var(--cc-green-900);
+  --sidebar-primary: var(--cc-green-800);
+  --sidebar-primary-foreground: var(--cc-cream-50);
+  --sidebar-accent: var(--cc-cream-200);
+  --sidebar-accent-foreground: var(--cc-green-800);
+  --sidebar-border: var(--cc-beige-300);
+  --sidebar-ring: var(--cc-green-700);
+}
+
+.dark {
+  --background: #10261a;
+  --foreground: var(--cc-cream-100);
+  --card: var(--cc-green-800);
+  --card-foreground: var(--cc-cream-100);
+  --popover: var(--cc-green-800);
+  --popover-foreground: var(--cc-cream-100);
+  --primary: var(--cc-gold-400);
+  --primary-foreground: var(--cc-green-900);
+  --secondary: #234f30;
+  --secondary-foreground: var(--cc-cream-100);
+  --muted: #234f30;
+  --muted-foreground: #c9be9f;
+  --accent: var(--cc-gold-400);
+  --accent-foreground: var(--cc-green-900);
+  --destructive: #d8674a;
+  --border: rgba(250, 243, 228, 0.12);
+  --input: rgba(250, 243, 228, 0.16);
+  --ring: var(--cc-gold-400);
+  --chart-1: var(--cc-gold-400);
+  --chart-2: var(--cc-cream-200);
+  --chart-3: var(--cc-green-700);
+  --chart-4: var(--cc-beige-300);
+  --chart-5: #8a9b6e;
+  --sidebar: var(--cc-green-900);
+  --sidebar-foreground: var(--cc-cream-100);
+  --sidebar-primary: var(--cc-gold-400);
+  --sidebar-primary-foreground: var(--cc-green-900);
+  --sidebar-accent: #234f30;
+  --sidebar-accent-foreground: var(--cc-cream-100);
+  --sidebar-border: rgba(250, 243, 228, 0.12);
+  --sidebar-ring: var(--cc-gold-400);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
