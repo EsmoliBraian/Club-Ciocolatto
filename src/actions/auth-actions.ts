@@ -2,7 +2,8 @@
 
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
-import { auth, signIn, signOut } from "@/lib/auth";
+import { signIn, signOut } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/schemas/auth";
 import { registerCustomer, CustomerServiceError } from "@/server/services/customer-service";
 
@@ -22,8 +23,18 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   const password = String(formData.get("password") ?? "");
   const callbackUrl = formData.get("callbackUrl");
 
+  // Resolved *before* signIn so we can hand NextAuth a single redirectTo and let
+  // it set the session cookie and redirect in one atomic internal flow. Reading
+  // the session back out via a separate auth() call right after signIn (the
+  // previous approach) raced the cookie write on some browsers — intermittently
+  // landing back on /login because the redirect target was computed from a
+  // session that hadn't been readable yet.
+  const user = await prisma.user.findUnique({ where: { email }, select: { role: true } });
+  const redirectTo =
+    typeof callbackUrl === "string" && callbackUrl ? callbackUrl : roleHomePath(user?.role ?? "CUSTOMER");
+
   try {
-    await signIn("credentials", { email, password, redirect: false });
+    await signIn("credentials", { email, password, redirectTo });
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: "Email o contraseña incorrectos." };
@@ -31,9 +42,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
     throw error;
   }
 
-  const session = await auth();
-  const role = session?.user.role;
-  redirect(typeof callbackUrl === "string" && callbackUrl ? callbackUrl : roleHomePath(role ?? "CUSTOMER"));
+  return {};
 }
 
 export async function registerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -69,13 +78,16 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirect: false,
+      redirectTo: "/inicio",
     });
-  } catch {
-    redirect("/login?registered=1");
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect("/login?registered=1");
+    }
+    throw error; // rethrow the redirect signIn() throws internally on success
   }
 
-  redirect("/inicio");
+  return {};
 }
 
 export async function logoutAction() {

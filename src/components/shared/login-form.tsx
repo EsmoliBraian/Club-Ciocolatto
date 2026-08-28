@@ -32,7 +32,7 @@ export function LoginForm({ callbackUrl, registered }: { callbackUrl?: string; r
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required placeholder="vos@ejemplo.com" />
+        <Input id="email" name="email" type="email" autoComplete="username" required placeholder="vos@ejemplo.com" />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Contraseña</Label>
