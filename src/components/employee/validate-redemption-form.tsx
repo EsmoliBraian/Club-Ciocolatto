@@ -31,6 +31,12 @@ export function ValidateRedemptionForm() {
           <CheckCircle2 className="size-4 shrink-0" />
           <span>
             Validado: <strong>{state.rewardName}</strong> para {state.customerName}.
+            {state.favoriteDrink && (
+              <>
+                {" "}
+                Preparar: <strong>{state.favoriteDrink}</strong>.
+              </>
+            )}
           </span>
         </div>
       )}

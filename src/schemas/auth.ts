@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FAVORITE_DRINK_OPTIONS } from "@/lib/constants";
 
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email("Ingresá un email válido"),
@@ -23,6 +24,7 @@ export const registerSchema = z.object({
     .regex(/[A-Z]/, "Debe incluir al menos una mayúscula")
     .regex(/[0-9]/, "Debe incluir al menos un número"),
   birthDate: z.coerce.date().max(new Date(), "Fecha inválida"),
+  favoriteDrink: z.enum(FAVORITE_DRINK_OPTIONS, { error: "Elegí tu bebida favorita" }),
   acceptedTerms: z.literal(true, {
     error: "Debés aceptar los términos y condiciones",
   }),
@@ -37,6 +39,7 @@ export const updateProfileSchema = z.object({
   lastName: z.string().trim().min(2, "Ingresá tu apellido"),
   phone: z.string().trim().min(6, "Ingresá un teléfono válido").max(20, "Ingresá un teléfono válido"),
   birthDate: z.coerce.date().max(new Date(), "Fecha inválida"),
+  favoriteDrink: z.enum(FAVORITE_DRINK_OPTIONS, { error: "Elegí tu bebida favorita" }),
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

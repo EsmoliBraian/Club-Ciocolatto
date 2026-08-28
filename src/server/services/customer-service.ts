@@ -6,6 +6,8 @@ import { awardPoints } from "@/server/services/loyalty-service";
 import { validateReferralCode, createReferral } from "@/server/services/referral-service";
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
+import { grantFreeReward } from "@/server/services/reward-service";
+import { BIRTHDAY_COFFEE_REWARD_ID } from "@/lib/constants";
 import type { RegisterInput } from "@/schemas/auth";
 
 export class CustomerServiceError extends Error {
@@ -68,6 +70,7 @@ export async function registerCustomer(input: RegisterInput) {
         firstName: input.firstName,
         lastName: input.lastName,
         birthDate: input.birthDate,
+        favoriteDrink: input.favoriteDrink,
         acceptedTermsAt: new Date(),
         acceptedMarketingAt: input.acceptedMarketing ? new Date() : null,
       },
@@ -182,16 +185,30 @@ export async function claimBirthdayReward(customerProfileId: string) {
       );
     }
 
-    await notify(
-      {
-        userId: profile.user.id,
-        type: "BIRTHDAY",
-        title: "¡Feliz cumpleaños! 🎂",
-        body: `Tenemos un regalo para vos: +${config.birthdayPoints} puntos.`,
-      },
-      tx
-    );
+    const drink = profile.user.favoriteDrink ?? "café";
+    const birthdayReward = await tx.reward.findUnique({ where: { id: BIRTHDAY_COFFEE_REWARD_ID } });
 
-    return { pointsAwarded: config.birthdayPoints };
+    let redemptionCode: string | null = null;
+    if (birthdayReward?.active) {
+      const granted = await grantFreeReward(tx, {
+        customerProfileId: profile.id,
+        rewardId: birthdayReward.id,
+        notificationTitle: "¡Feliz cumpleaños! 🎂",
+        notificationBody: `Tenés un ${drink} gratis — mostrá el código en caja. También sumaste ${config.birthdayPoints} puntos.`,
+      });
+      redemptionCode = granted.redemptionCode;
+    } else {
+      await notify(
+        {
+          userId: profile.user.id,
+          type: "BIRTHDAY",
+          title: "¡Feliz cumpleaños! 🎂",
+          body: `Sumaste ${config.birthdayPoints} puntos de regalo.`,
+        },
+        tx
+      );
+    }
+
+    return { pointsAwarded: config.birthdayPoints, drink, redemptionCode };
   });
 }

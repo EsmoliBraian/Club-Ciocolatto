@@ -51,6 +51,24 @@ para la diferencia entre saldo y base de nivel. La resolución de nivel
 crea Amigo/Fan/Fanático, pero un admin puede agregar, editar o desactivar
 niveles libremente desde `/admin/niveles`.
 
+## Cumpleaños
+
+Se pide la bebida favorita del cliente (`User.favoriteDrink`, lista fija en
+`src/lib/constants.ts`) en el registro y en "Mis datos". Durante la ventana
+de cumpleaños (`isBirthdayWindowActive`, ±7 días), `/inicio` muestra un
+banner — al reclamarlo (`claimBirthdayReward`), una sola vez por año:
+
+1. Otorga `config.birthdayPoints` (bono de puntos).
+2. Crea un `RewardRedemption` real (código de un solo uso, mismo vencimiento
+   que cualquier canje) para el reward oculto sembrado como
+   `BIRTHDAY_COFFEE_REWARD_ID` — no puntos simbólicos, un café gratis
+   canjeable de verdad, con `pointsSpent: 0`.
+
+Ese reward tiene `hidden: true`, así que nunca aparece en `/canjear` — solo
+se otorga por este flujo o manualmente desde "Enviar beneficio" en el admin.
+El mostrador ve la bebida a preparar al validar el código
+(`validateRedemptionAction` incluye `user.favoriteDrink`).
+
 ## Misiones
 
 `evaluateMissionsForOrder()` corre dentro de la misma transacción que

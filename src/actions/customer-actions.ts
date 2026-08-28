@@ -24,6 +24,7 @@ export async function updateProfileAction(
     lastName: formData.get("lastName"),
     phone: formData.get("phone"),
     birthDate: formData.get("birthDate"),
+    favoriteDrink: formData.get("favoriteDrink"),
   });
   if (!parsed.success) {
     return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
@@ -46,7 +47,13 @@ export async function claimBirthdayRewardAction() {
   try {
     const result = await claimBirthdayReward(profile.id);
     revalidatePath("/inicio");
-    return { success: true as const, pointsAwarded: result.pointsAwarded };
+    revalidatePath("/perfil/beneficios");
+    return {
+      success: true as const,
+      pointsAwarded: result.pointsAwarded,
+      drink: result.drink,
+      redemptionCode: result.redemptionCode,
+    };
   } catch (error) {
     if (error instanceof CustomerServiceError) return { success: false as const, error: error.message };
     throw error;

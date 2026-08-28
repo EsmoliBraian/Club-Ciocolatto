@@ -129,6 +129,7 @@ model User {
   firstName           String
   lastName            String
   birthDate           DateTime? @db.Date
+  favoriteDrink       String? // e.g. "Latte" — used for the automatic birthday free-coffee gift
   avatarUrl           String?
   active              Boolean   @default(true)
   acceptedTermsAt     DateTime?
@@ -295,6 +296,7 @@ model Reward {
   validFrom      DateTime?
   validUntil     DateTime?
   active         Boolean        @default(true)
+  hidden         Boolean        @default(false) // excluded from the customer store — for internal/automatic grants (e.g. the birthday coffee)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

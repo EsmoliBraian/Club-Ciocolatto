@@ -126,6 +126,7 @@ export async function adjustPointsAction(_prev: ActionState, formData: FormData)
 export interface ValidateRedemptionState extends ActionState {
   rewardName?: string;
   customerName?: string;
+  favoriteDrink?: string | null;
 }
 
 export async function lookupRedemptionAction(code: string) {
@@ -161,6 +162,7 @@ export async function validateRedemptionAction(
       success: true,
       rewardName: full?.reward.name,
       customerName: full ? `${full.customerProfile.user.firstName} ${full.customerProfile.user.lastName}` : undefined,
+      favoriteDrink: full?.customerProfile.user.favoriteDrink,
     };
   } catch (error) {
     if (error instanceof RewardRedemptionError) return { error: error.message };

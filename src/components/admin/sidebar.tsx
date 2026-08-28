@@ -63,7 +63,7 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
 export function AdminSidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col bg-cc-green-900 px-3 py-4 md:flex">
-      <Link href="/admin" className="mb-6 px-3 font-heading text-xl font-semibold text-cc-gold-400 italic">
+      <Link href="/admin" className="mb-6 px-3 font-logo text-xl font-semibold text-cc-gold-400 italic">
         Ciocolatto
       </Link>
       <AdminNavLinks />

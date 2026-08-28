@@ -6,7 +6,7 @@ export default function WelcomePage() {
   return (
     <main className="flex flex-1 flex-col bg-cc-green-900 px-6 pt-12 pb-8 text-center">
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col items-center">
-        <p className="font-heading text-3xl font-semibold text-cc-gold-400 italic">Ciocolatto</p>
+        <p className="font-logo text-3xl font-semibold text-cc-gold-400 italic">Ciocolatto</p>
 
         <div className="mt-14 flex flex-1 flex-col items-center justify-center gap-3">
           <h1 className="font-heading text-3xl font-semibold text-cc-cream-50 text-balance">

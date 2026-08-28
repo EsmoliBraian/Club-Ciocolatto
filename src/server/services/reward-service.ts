@@ -16,13 +16,24 @@ export class RewardRedemptionError extends Error {
 export async function listActiveRewards(db: Db = prisma): Promise<Reward[]> {
   const now = new Date();
   const rewards = await db.reward.findMany({
-    where: { active: true },
+    where: { active: true, hidden: false },
     orderBy: { pointsCost: "asc" },
     include: { requiredTier: true },
   });
   return rewards.filter(
     (r) => (!r.validFrom || r.validFrom <= now) && (!r.validUntil || r.validUntil >= now)
   );
+}
+
+async function generateUniqueRedemptionCode(db: Db): Promise<string> {
+  let code = generateRedemptionCode();
+  // Extremely unlikely collision given the 8-char unambiguous alphabet, but guard anyway.
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const exists = await db.rewardRedemption.findUnique({ where: { redemptionCode: code } });
+    if (!exists) break;
+    code = generateRedemptionCode();
+  }
+  return code;
 }
 
 export interface RewardEligibility {
@@ -156,13 +167,7 @@ export async function redeemReward(
     now.getTime() + config.redemptionCodeExpiryHours * 60 * 60 * 1000
   );
 
-  let redemptionCode = generateRedemptionCode();
-  // Extremely unlikely collision given the 8-char unambiguous alphabet, but guard anyway.
-  for (let attempts = 0; attempts < 5; attempts++) {
-    const exists = await db.rewardRedemption.findUnique({ where: { redemptionCode } });
-    if (!exists) break;
-    redemptionCode = generateRedemptionCode();
-  }
+  const redemptionCode = await generateUniqueRedemptionCode(db);
 
   await db.rewardRedemption.create({
     data: {
@@ -227,4 +232,47 @@ export async function markRedemptionUsed(
     where: { id: redemption.id },
     data: { status: "USED", redeemedAt: new Date(), redeemedById: params.employeeId },
   });
+}
+
+/**
+ * Creates a redemption for `rewardId` without touching points or eligibility
+ * checks — for gifts the system or an admin grants outright (the birthday
+ * free coffee, a manual "send benefit" from the admin panel). Must run
+ * inside `prisma.$transaction` — call sites wrap this.
+ */
+export async function grantFreeReward(
+  db: Db,
+  params: {
+    customerProfileId: string;
+    rewardId: string;
+    notificationTitle: string;
+    notificationBody: string;
+  }
+): Promise<RedeemRewardResult & { id: string }> {
+  const [reward, profile, config] = [
+    await db.reward.findUniqueOrThrow({ where: { id: params.rewardId } }),
+    await db.customerProfile.findUniqueOrThrow({ where: { id: params.customerProfileId } }),
+    await getLoyaltyConfig(db),
+  ];
+
+  const expiresAt = new Date(Date.now() + config.redemptionCodeExpiryHours * 60 * 60 * 1000);
+  const redemptionCode = await generateUniqueRedemptionCode(db);
+
+  const redemption = await db.rewardRedemption.create({
+    data: {
+      customerProfileId: params.customerProfileId,
+      rewardId: reward.id,
+      pointsSpent: 0,
+      redemptionCode,
+      status: "PENDING",
+      expiresAt,
+    },
+  });
+
+  await notify(
+    { userId: profile.userId, type: "REWARD_UNLOCKED", title: params.notificationTitle, body: params.notificationBody },
+    db
+  );
+
+  return { id: redemption.id, redemptionCode, expiresAt, pointsRemaining: profile.pointsBalance };
 }

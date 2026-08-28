@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Fraunces } from "next/font/google";
+import { Geist, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthSessionProvider } from "@/components/shared/session-provider";
@@ -11,6 +11,16 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+// Headings, card titles, body emphasis — modern and highly legible.
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
+});
+
+// Reserved for the "Ciocolatto" wordmark only (via the `font-logo` utility) —
+// not used for regular headings, so the brand mark stays distinctive instead
+// of making every heading in the app look like the logo.
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
@@ -59,7 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${jakarta.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <AuthSessionProvider>

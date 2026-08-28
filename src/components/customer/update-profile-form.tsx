@@ -8,10 +8,16 @@ import { Field } from "@/components/admin/form-field";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import type { User } from "@prisma/client";
+import { FAVORITE_DRINK_OPTIONS } from "@/lib/constants";
 
-export function UpdateProfileForm({ user }: { user: Pick<User, "firstName" | "lastName" | "phone" | "birthDate" | "email"> }) {
+export function UpdateProfileForm({
+  user,
+}: {
+  user: Pick<User, "firstName" | "lastName" | "phone" | "birthDate" | "email" | "favoriteDrink">;
+}) {
   const { state, pending, submit } = useDialogFormAction(updateProfileAction, {});
 
   useEffect(() => {
@@ -45,6 +51,23 @@ export function UpdateProfileForm({ user }: { user: Pick<User, "firstName" | "la
         required
       />
       {errors.birthDate && <p className="text-xs text-destructive">{errors.birthDate[0]}</p>}
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="favoriteDrink">Tu bebida favorita</Label>
+        <Select name="favoriteDrink" defaultValue={user.favoriteDrink ?? undefined} required>
+          <SelectTrigger id="favoriteDrink" className="w-full">
+            <SelectValue placeholder="Elegí una opción" />
+          </SelectTrigger>
+          <SelectContent>
+            {FAVORITE_DRINK_OPTIONS.map((drink) => (
+              <SelectItem key={drink} value={drink}>
+                {drink}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.favoriteDrink && <p className="text-xs text-destructive">{errors.favoriteDrink[0]}</p>}
+      </div>
 
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
 

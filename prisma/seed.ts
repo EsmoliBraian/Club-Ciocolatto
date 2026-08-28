@@ -7,6 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../src/lib/password";
 import { buildReferralCodeCandidate, generateQrToken } from "../src/lib/codes";
+import { BIRTHDAY_COFFEE_REWARD_ID } from "../src/lib/constants";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -176,6 +177,21 @@ async function main() {
         active: true,
       },
     }),
+    prisma.reward.upsert({
+      where: { id: BIRTHDAY_COFFEE_REWARD_ID },
+      update: { icon: "🎂" },
+      create: {
+        id: BIRTHDAY_COFFEE_REWARD_ID,
+        name: "Café de cumpleaños",
+        description: "Tu bebida favorita gratis, regalo de Ciocolatto por tu cumpleaños.",
+        icon: "🎂",
+        category: "PRODUCT",
+        pointsCost: 0,
+        hidden: true, // granted automatically by claimBirthdayReward() — never shown in the store
+        perUserLimit: null,
+        active: true,
+      },
+    }),
   ]);
 
   await Promise.all([
@@ -286,6 +302,7 @@ async function main() {
         lastName: "Demo",
         phone: "+5491100000000",
         birthDate: new Date(Date.UTC(1995, 4, 20)),
+        favoriteDrink: "Latte",
         active: true,
       },
     });

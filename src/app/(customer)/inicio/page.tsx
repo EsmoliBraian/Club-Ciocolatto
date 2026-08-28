@@ -52,7 +52,7 @@ export default async function CustomerHomePage() {
         </Avatar>
       </div>
 
-      {showBirthday && <BirthdayBanner />}
+      {showBirthday && <BirthdayBanner favoriteDrink={profile.user.favoriteDrink} />}
 
       <TierProgressCard pointsBalance={profile.pointsBalance} progress={progress} />
 

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ADMIN_ROLES } from "@/lib/rbac";
 import { recordAuditLog } from "@/server/services/audit-service";
-import { notify } from "@/server/services/notification-service";
-import { generateRedemptionCode, generateApiKey } from "@/lib/codes";
+import { grantFreeReward } from "@/server/services/reward-service";
+import { generateApiKey } from "@/lib/codes";
 import { hashApiKey } from "@/lib/api-auth";
 import {
   tierSchema,
@@ -286,24 +286,14 @@ export async function grantRewardAction(_prev: ActionState, formData: FormData):
   if (!customerProfileId || !rewardId) return { error: "Elegí un premio." };
   if (!reason) return { error: "El motivo es obligatorio." };
 
-  const [reward, profile, config] = [
-    await prisma.reward.findUniqueOrThrow({ where: { id: rewardId } }),
-    await prisma.customerProfile.findUniqueOrThrow({ where: { id: customerProfileId }, include: { user: true } }),
-    await prisma.loyaltyConfig.upsert({ where: { id: "singleton" }, update: {}, create: { id: "singleton" } }),
-  ];
-
-  const expiresAt = new Date(Date.now() + config.redemptionCodeExpiryHours * 60 * 60 * 1000);
+  const reward = await prisma.reward.findUniqueOrThrow({ where: { id: rewardId } });
 
   await prisma.$transaction(async (tx) => {
-    const redemption = await tx.rewardRedemption.create({
-      data: {
-        customerProfileId,
-        rewardId,
-        pointsSpent: 0,
-        redemptionCode: generateRedemptionCode(),
-        status: "PENDING",
-        expiresAt,
-      },
+    const redemption = await grantFreeReward(tx, {
+      customerProfileId,
+      rewardId,
+      notificationTitle: "🎁 Tenés un nuevo beneficio",
+      notificationBody: `${reward.name} — mostrá el código en caja para retirarlo.`,
     });
     await recordAuditLog(
       {
@@ -313,15 +303,6 @@ export async function grantRewardAction(_prev: ActionState, formData: FormData):
         entityId: redemption.id,
         changes: { rewardId, customerProfileId },
         reason,
-      },
-      tx
-    );
-    await notify(
-      {
-        userId: profile.userId,
-        type: "REWARD_UNLOCKED",
-        title: "🎁 Tenés un nuevo beneficio",
-        body: `${reward.name} — mostrá el código en caja para retirarlo.`,
       },
       tx
     );

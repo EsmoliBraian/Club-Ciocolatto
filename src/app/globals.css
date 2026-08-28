@@ -9,7 +9,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-fraunces);
+  --font-heading: var(--font-jakarta);
+  /* Reserved for the "Ciocolatto" wordmark only — see `font-logo` usages. */
+  --font-logo: var(--font-fraunces);
   /* Ciocolatto brand — fixed values usable regardless of light/dark theme,
      e.g. the points hero card, which is always deep-green like a physical card. */
   --color-cc-green-900: var(--cc-green-900);

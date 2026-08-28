@@ -24,7 +24,7 @@ export function AdminMobileNav() {
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="font-heading text-lg text-cc-gold-400 italic"
+                className="font-logo text-lg text-cc-gold-400 italic"
               />
             }
           >

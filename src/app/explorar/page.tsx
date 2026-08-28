@@ -19,7 +19,7 @@ export default async function ExplorePage() {
       </Link>
 
       <div className="mx-auto mt-4 flex w-full max-w-sm flex-col items-center gap-2 text-center">
-        <p className="font-heading text-2xl font-semibold text-cc-cream-50">Club Ciocolatto</p>
+        <p className="font-logo text-2xl font-semibold text-cc-cream-50 italic">Club Ciocolatto</p>
         <p className="text-sm text-cc-cream-200">Más que clientes, fanáticos.</p>
       </div>
 

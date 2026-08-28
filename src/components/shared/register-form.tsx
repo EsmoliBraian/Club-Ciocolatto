@@ -6,7 +6,9 @@ import { registerAction, type ActionState } from "@/actions/auth-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { FAVORITE_DRINK_OPTIONS } from "@/lib/constants";
 
 const initialState: ActionState = {};
 
@@ -54,6 +56,26 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
         <Label htmlFor="birthDate">Fecha de nacimiento</Label>
         <Input id="birthDate" name="birthDate" type="date" required />
         {errors.birthDate && <p className="text-xs text-destructive">{errors.birthDate[0]}</p>}
+        <p className="text-xs text-muted-foreground">
+          Te vamos a regalar un café gratis el día de tu cumpleaños 🎂
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="favoriteDrink">Tu bebida favorita</Label>
+        <Select name="favoriteDrink" required>
+          <SelectTrigger id="favoriteDrink" className="w-full">
+            <SelectValue placeholder="Elegí una opción" />
+          </SelectTrigger>
+          <SelectContent>
+            {FAVORITE_DRINK_OPTIONS.map((drink) => (
+              <SelectItem key={drink} value={drink}>
+                {drink}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {errors.favoriteDrink && <p className="text-xs text-destructive">{errors.favoriteDrink[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">

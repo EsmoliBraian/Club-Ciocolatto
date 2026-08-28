@@ -66,7 +66,7 @@ export function DesktopNav() {
   return (
     <nav className="hidden border-b border-cc-cream-50/10 bg-cc-green-900 sm:block">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <Link href="/inicio" className="font-heading text-lg font-semibold text-cc-cream-50">
+        <Link href="/inicio" className="font-logo text-lg font-semibold text-cc-cream-50 italic">
           Club Ciocolatto
         </Link>
         <ul className="flex items-center gap-1">
