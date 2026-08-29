@@ -36,14 +36,18 @@ export async function generateUniqueQrToken(db: Db): Promise<string> {
 
 /** Registers a new customer end to end: account, profile, referral link, welcome points. */
 export async function registerCustomer(input: RegisterInput) {
-  const existing = await prisma.user.findFirst({
-    where: { OR: [{ email: input.email }, ...(input.phone ? [{ phone: input.phone }] : [])] },
-  });
-  if (existing) {
-    throw new CustomerServiceError(
-      "EMAIL_OR_PHONE_TAKEN",
-      "Ya existe una cuenta con ese email o teléfono."
-    );
+  // Checked separately (not one OR query) so the caller can tell the user
+  // exactly which field collided instead of a generic "email or phone" — a
+  // customer shouldn't have to guess which one to fix.
+  const existingByEmail = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingByEmail) {
+    throw new CustomerServiceError("EMAIL_TAKEN", "Ya existe una cuenta con ese email.");
+  }
+  if (input.phone) {
+    const existingByPhone = await prisma.user.findUnique({ where: { phone: input.phone } });
+    if (existingByPhone) {
+      throw new CustomerServiceError("PHONE_TAKEN", "Ya existe una cuenta con ese teléfono.");
+    }
   }
 
   let referrer: Awaited<ReturnType<typeof validateReferralCode>> | null = null;

@@ -50,8 +50,44 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   return {};
 }
 
-export async function registerAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+export interface RegisterActionState extends ActionState {
+  /**
+   * Whatever the user had typed, echoed back on every error path so the form
+   * can restore it via defaultValue instead of coming back blank — never
+   * includes the password, which is re-typed on error like everywhere else.
+   */
+  values?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    birthDate?: string;
+    favoriteDrink?: string;
+    referralCode?: string;
+    acceptedTerms?: boolean;
+    acceptedMarketing?: boolean;
+  };
+}
+
+export async function registerAction(
+  _prev: RegisterActionState,
+  formData: FormData
+): Promise<RegisterActionState> {
   const referralCode = String(formData.get("referralCode") ?? "").trim();
+  const acceptedTerms = formData.get("acceptedTerms") === "on";
+  const acceptedMarketing = formData.get("acceptedMarketing") === "on";
+
+  const values: RegisterActionState["values"] = {
+    firstName: String(formData.get("firstName") ?? ""),
+    lastName: String(formData.get("lastName") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    birthDate: String(formData.get("birthDate") ?? ""),
+    favoriteDrink: String(formData.get("favoriteDrink") ?? ""),
+    referralCode,
+    acceptedTerms,
+    acceptedMarketing,
+  };
 
   const parsed = registerSchema.safeParse({
     firstName: formData.get("firstName"),
@@ -61,8 +97,8 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     password: formData.get("password"),
     birthDate: formData.get("birthDate"),
     favoriteDrink: formData.get("favoriteDrink"),
-    acceptedTerms: formData.get("acceptedTerms") === "on",
-    acceptedMarketing: formData.get("acceptedMarketing") === "on",
+    acceptedTerms,
+    acceptedMarketing,
     referralCode: referralCode || undefined,
   });
 
@@ -70,13 +106,22 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     return {
       error: "Revisá los datos ingresados.",
       fieldErrors: parsed.error.flatten().fieldErrors,
+      values,
     };
   }
 
   try {
     await registerCustomer(parsed.data);
   } catch (error) {
-    if (error instanceof CustomerServiceError) return { error: error.message };
+    if (error instanceof CustomerServiceError) {
+      const fieldErrors =
+        error.code === "EMAIL_TAKEN"
+          ? { email: [error.message] }
+          : error.code === "PHONE_TAKEN"
+            ? { phone: [error.message] }
+            : undefined;
+      return { error: fieldErrors ? undefined : error.message, fieldErrors, values };
+    }
     throw error;
   }
 

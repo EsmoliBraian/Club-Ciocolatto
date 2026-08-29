@@ -56,4 +56,71 @@ describe("auth-actions: registerAction", () => {
 
     if (created) await cleanupTestCustomer(created.id);
   });
+
+  it("echoes back what was typed on a validation error, except the password", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const formData = new FormData();
+    formData.set("firstName", "Test");
+    formData.set("lastName", suffix);
+    formData.set("email", `sticky-${suffix}@example.com`);
+    formData.set("phone", `+549sticky${suffix}`);
+    formData.set("password", "weak"); // fails the password policy on purpose
+    formData.set("birthDate", "1995-01-01");
+    formData.set("favoriteDrink", "Latte");
+    formData.set("acceptedTerms", "on");
+    formData.set("acceptedMarketing", "on");
+    formData.set("referralCode", "");
+
+    const result = await registerAction({}, formData);
+
+    expect(result.fieldErrors?.password).toBeDefined();
+    expect(result.values).toMatchObject({
+      firstName: "Test",
+      lastName: suffix,
+      email: `sticky-${suffix}@example.com`,
+      phone: `+549sticky${suffix}`,
+      birthDate: "1995-01-01",
+      favoriteDrink: "Latte",
+      acceptedTerms: true,
+      acceptedMarketing: true,
+    });
+
+    const created = await prisma.user.findUnique({ where: { email: `sticky-${suffix}@example.com` } });
+    expect(created).toBeNull(); // weak password must not have created an account
+  });
+
+  it("flags the email field specifically when it's already taken, not a generic banner", async () => {
+    const suffix = randomUUID().slice(0, 8);
+    const takenEmail = `taken-${suffix}@example.com`;
+    const existing = await prisma.user.create({
+      data: {
+        email: takenEmail,
+        phone: `+549taken${suffix}`,
+        passwordHash: "irrelevant",
+        role: "CUSTOMER",
+        firstName: "Existing",
+        lastName: "User",
+      },
+    });
+
+    try {
+      const formData = new FormData();
+      formData.set("firstName", "Test");
+      formData.set("lastName", suffix);
+      formData.set("email", takenEmail);
+      formData.set("phone", `+549newphone${suffix}`);
+      formData.set("password", "Test1234!");
+      formData.set("birthDate", "1995-01-01");
+      formData.set("favoriteDrink", "Latte");
+      formData.set("acceptedTerms", "on");
+      formData.set("acceptedMarketing", "on");
+      formData.set("referralCode", "");
+
+      const result = await registerAction({}, formData);
+      expect(result.fieldErrors?.email).toBeDefined();
+      expect(result.fieldErrors?.phone).toBeUndefined();
+    } finally {
+      await prisma.user.delete({ where: { id: existing.id } });
+    }
+  });
 });

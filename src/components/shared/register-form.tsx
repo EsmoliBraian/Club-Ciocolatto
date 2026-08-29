@@ -2,19 +2,21 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { registerAction, type ActionState } from "@/actions/auth-actions";
+import { registerAction, type RegisterActionState } from "@/actions/auth-actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
+import { TermsDialog } from "@/components/shared/terms-dialog";
 import { FAVORITE_DRINK_OPTIONS } from "@/lib/constants";
 
-const initialState: ActionState = {};
+const initialState: RegisterActionState = {};
 
 export function RegisterForm({ referralCode }: { referralCode?: string }) {
   const [state, formAction] = useActionState(registerAction, initialState);
   const errors = state.fieldErrors ?? {};
+  const values = state.values;
 
   return (
     <form action={formAction} className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
@@ -30,31 +32,69 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="firstName">Nombre</Label>
-          <Input id="firstName" name="firstName" required autoComplete="given-name" />
+          <Input
+            id="firstName"
+            name="firstName"
+            required
+            autoComplete="given-name"
+            defaultValue={values?.firstName}
+            aria-invalid={!!errors.firstName}
+          />
           {errors.firstName && <p className="text-xs text-destructive">{errors.firstName[0]}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="lastName">Apellido</Label>
-          <Input id="lastName" name="lastName" required autoComplete="family-name" />
+          <Input
+            id="lastName"
+            name="lastName"
+            required
+            autoComplete="family-name"
+            defaultValue={values?.lastName}
+            aria-invalid={!!errors.lastName}
+          />
           {errors.lastName && <p className="text-xs text-destructive">{errors.lastName[0]}</p>}
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" required autoComplete="email" />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          defaultValue={values?.email}
+          aria-invalid={!!errors.email}
+        />
         {errors.email && <p className="text-xs text-destructive">{errors.email[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="phone">Teléfono</Label>
-        <Input id="phone" name="phone" type="tel" required autoComplete="tel" placeholder="+54 9 11 1234 5678" />
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          required
+          autoComplete="tel"
+          placeholder="+54 9 11 1234 5678"
+          defaultValue={values?.phone}
+          aria-invalid={!!errors.phone}
+        />
         {errors.phone && <p className="text-xs text-destructive">{errors.phone[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="birthDate">Fecha de nacimiento</Label>
-        <Input id="birthDate" name="birthDate" type="date" required />
+        <Input
+          id="birthDate"
+          name="birthDate"
+          type="date"
+          required
+          defaultValue={values?.birthDate}
+          aria-invalid={!!errors.birthDate}
+        />
         {errors.birthDate && <p className="text-xs text-destructive">{errors.birthDate[0]}</p>}
         <p className="text-xs text-muted-foreground">
           Te vamos a regalar un café gratis el día de tu cumpleaños 🎂
@@ -63,8 +103,8 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="favoriteDrink">Tu bebida favorita</Label>
-        <Select name="favoriteDrink" required>
-          <SelectTrigger id="favoriteDrink" className="w-full">
+        <Select name="favoriteDrink" required defaultValue={values?.favoriteDrink || undefined}>
+          <SelectTrigger id="favoriteDrink" className="w-full" aria-invalid={!!errors.favoriteDrink}>
             <SelectValue placeholder="Elegí una opción" />
           </SelectTrigger>
           <SelectContent>
@@ -80,7 +120,14 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Contraseña</Label>
-        <Input id="password" name="password" type="password" required autoComplete="new-password" />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          autoComplete="new-password"
+          aria-invalid={!!errors.password}
+        />
         {errors.password ? (
           <ul className="list-disc pl-4 text-xs text-destructive">
             {errors.password.map((msg) => (
@@ -99,26 +146,23 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
         <Input
           id="referralCode"
           name="referralCode"
-          defaultValue={referralCode}
+          defaultValue={values?.referralCode ?? referralCode}
           className="uppercase"
           placeholder="Ej: BRAIAN50"
+          aria-invalid={!!errors.referralCode}
         />
         {errors.referralCode && <p className="text-xs text-destructive">{errors.referralCode[0]}</p>}
       </div>
 
       <div className="flex flex-col gap-2.5 pt-1">
         <label className="flex items-start gap-2 text-sm">
-          <Checkbox name="acceptedTerms" required className="mt-0.5" />
+          <Checkbox name="acceptedTerms" required className="mt-0.5" defaultChecked={values?.acceptedTerms} />
           <span>
-            Acepto los{" "}
-            <Link href="/terminos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              términos y condiciones
-            </Link>{" "}
-            y la política de privacidad.
+            Acepto los <TermsDialog /> y la política de privacidad.
           </span>
         </label>
         <label className="flex items-start gap-2 text-sm text-muted-foreground">
-          <Checkbox name="acceptedMarketing" className="mt-0.5" />
+          <Checkbox name="acceptedMarketing" className="mt-0.5" defaultChecked={values?.acceptedMarketing} />
           <span>Quiero recibir novedades y promociones de Ciocolatto.</span>
         </label>
       </div>
