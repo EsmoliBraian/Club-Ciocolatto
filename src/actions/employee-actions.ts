@@ -13,6 +13,7 @@ import {
   markRedemptionUsed,
   RewardRedemptionError,
 } from "@/server/services/reward-service";
+import { BIRTHDAY_COFFEE_REWARD_ID } from "@/lib/constants";
 
 export interface ActionState {
   error?: string;
@@ -184,11 +185,17 @@ export async function validateRedemptionAction(
       markRedemptionUsed(tx, { redemptionCode: code, employeeId: employee.id })
     );
     const full = await findRedemptionByCode(redemption.redemptionCode);
+    // "Preparar: {bebida}" only makes sense for the birthday coffee, whose
+    // reward name is generic ("Café de cumpleaños") and doesn't say which
+    // drink to make. Every other reward (e.g. "Café americano") already
+    // says exactly what it is — showing the customer's favorite drink there
+    // too was misleading (it made "Café americano" say "Preparar: Latte").
+    const isBirthdayCoffee = full?.rewardId === BIRTHDAY_COFFEE_REWARD_ID;
     return {
       success: true,
       rewardName: full?.reward.name,
       customerName: full ? `${full.customerProfile.user.firstName} ${full.customerProfile.user.lastName}` : undefined,
-      favoriteDrink: full?.customerProfile.user.favoriteDrink,
+      favoriteDrink: isBirthdayCoffee ? full?.customerProfile.user.favoriteDrink : undefined,
     };
   } catch (error) {
     if (error instanceof RewardRedemptionError) return { error: error.message };
