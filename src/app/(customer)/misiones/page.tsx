@@ -3,7 +3,6 @@ import { Trophy } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { getMissionsForCustomer } from "@/server/services/mission-service";
-import { getReferralStats } from "@/server/services/referral-service";
 import { MissionCard } from "@/components/customer/mission-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -15,27 +14,12 @@ export default async function MissionsPage() {
   if (!profile) return null;
 
   const missions = await getMissionsForCustomer(profile.id);
-  const referralStats = await getReferralStats(profile.id);
 
-  const orderDriven = missions.filter((m) => m.mission.type !== "REFERRAL");
-  const referralMission = missions.find((m) => m.mission.type === "REFERRAL");
-
-  const all = [
-    ...(referralMission
-      ? [
-          {
-            mission: referralMission.mission,
-            currentValue: Math.min(referralStats.completed, referralMission.mission.targetValue),
-            completed: referralStats.completed >= referralMission.mission.targetValue,
-          },
-        ]
-      : []),
-    ...orderDriven.map((m) => ({
-      mission: m.mission,
-      currentValue: m.currentValue,
-      completed: m.status === "COMPLETED" || m.status === "REWARD_CLAIMED",
-    })),
-  ];
+  const all = missions.map((m) => ({
+    mission: m.mission,
+    currentValue: m.currentValue,
+    completed: m.status === "COMPLETED" || m.status === "REWARD_CLAIMED",
+  }));
 
   const active = all.filter((m) => !m.completed);
   const completed = all.filter((m) => m.completed);

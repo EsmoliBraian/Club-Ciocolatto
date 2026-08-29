@@ -8,6 +8,13 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+const passwordSchema = z
+  .string()
+  .min(8, "La contraseña debe tener al menos 8 caracteres")
+  .regex(/[a-z]/, "Debe incluir al menos una minúscula")
+  .regex(/[A-Z]/, "Debe incluir al menos una mayúscula")
+  .regex(/[0-9]/, "Debe incluir al menos un número");
+
 export const registerSchema = z.object({
   firstName: z.string().trim().min(2, "Ingresá tu nombre"),
   lastName: z.string().trim().min(2, "Ingresá tu apellido"),
@@ -17,12 +24,7 @@ export const registerSchema = z.object({
     .trim()
     .min(6, "Ingresá un teléfono válido")
     .max(20, "Ingresá un teléfono válido"),
-  password: z
-    .string()
-    .min(8, "La contraseña debe tener al menos 8 caracteres")
-    .regex(/[a-z]/, "Debe incluir al menos una minúscula")
-    .regex(/[A-Z]/, "Debe incluir al menos una mayúscula")
-    .regex(/[0-9]/, "Debe incluir al menos un número"),
+  password: passwordSchema,
   birthDate: z.coerce.date().max(new Date(), "Fecha inválida"),
   favoriteDrink: z.enum(FAVORITE_DRINK_OPTIONS, { error: "Elegí tu bebida favorita" }),
   acceptedTerms: z.literal(true, {
@@ -43,3 +45,12 @@ export const updateProfileSchema = z.object({
 });
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+export const requestPasswordResetSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Ingresá un email válido"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().trim().min(1, "Link inválido"),
+  password: passwordSchema,
+});

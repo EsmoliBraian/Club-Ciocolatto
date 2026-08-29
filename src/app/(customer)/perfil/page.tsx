@@ -12,7 +12,7 @@ const MENU = [
   { href: "/perfil/datos", label: "Mis datos", icon: UserCog },
   { href: "/promociones", label: "Promociones", icon: Sparkles },
   { href: "/actividad", label: "Actividad", icon: Activity },
-  { href: "/perfil/compras", label: "Historial de compras", icon: Receipt },
+  { href: "/perfil/compras", label: "Historial de puntos recibidos", icon: Receipt },
   { href: "/perfil/puntos", label: "Mis puntos", icon: Star },
   { href: "/perfil/beneficios", label: "Mis beneficios", icon: GiftIcon },
   { href: "/perfil/referidos", label: "Invitá amigos", icon: Users },

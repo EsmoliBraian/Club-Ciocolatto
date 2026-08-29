@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { NotificationChannel, NotificationType, Prisma } from "@prisma/client";
+import { sendEmail, birthdayEmailHtml, genericEmailHtml } from "@/lib/email";
 
 export interface NotifyInput {
   userId: string;
@@ -11,16 +12,29 @@ export interface NotifyInput {
   metadata?: Prisma.InputJsonValue;
 }
 
-/**
- * Channel dispatchers beyond IN_APP (which is always persisted to the DB and
+/** Channel dispatchers beyond IN_APP (which is always persisted to the DB and
  * read by the customer's notification bell). Register a provider here to add
- * email/WhatsApp/push without touching call sites — e.g.
- * `channelDispatchers.EMAIL = (n) => resend.emails.send(...)`.
- * Left empty by default: no external provider is wired up yet.
- */
+ * WhatsApp/push without touching call sites. */
 export const channelDispatchers: Partial<
   Record<NotificationChannel, (input: NotifyInput) => Promise<void>>
-> = {};
+> = {
+  EMAIL: async (input) => {
+    const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true, firstName: true } });
+    if (!user) return;
+
+    const metadata = (input.metadata ?? {}) as Record<string, unknown>;
+    const html =
+      input.type === "BIRTHDAY"
+        ? birthdayEmailHtml({
+            firstName: user.firstName,
+            drink: typeof metadata.drink === "string" ? metadata.drink : "bebida favorita",
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://club-ciocolatto.vercel.app",
+          })
+        : genericEmailHtml(input.title, input.body);
+
+    await sendEmail({ to: user.email, subject: input.title, html });
+  },
+};
 
 export async function notify(input: NotifyInput, db: Db = prisma) {
   const notification = await db.notification.create({

@@ -13,7 +13,6 @@ import {
   UserPlus,
   Settings,
   ShieldCheck,
-  Package,
   Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,7 +26,6 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/premios", label: "Premios", icon: Gift },
   { href: "/admin/canjes", label: "Canjes", icon: TicketCheck },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
-  { href: "/admin/productos", label: "Productos", icon: Package },
   { href: "/admin/referidos", label: "Referidos", icon: UserPlus },
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },

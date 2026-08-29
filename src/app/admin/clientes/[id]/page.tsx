@@ -4,9 +4,11 @@ import { Star } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getPointsHistory } from "@/server/services/loyalty-service";
 import { listActiveRewards } from "@/server/services/reward-service";
+import { listMissionLinkedProducts } from "@/server/services/mission-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { RegisterPurchaseForm } from "@/components/employee/register-purchase-form";
 import { AdjustPointsForm } from "@/components/employee/adjust-points-form";
 import { GrantRewardForm } from "@/components/admin/grant-reward-form";
 import { formatCurrency, formatDateTime } from "@/lib/format";
@@ -22,7 +24,7 @@ export default async function CustomerAdminDetailPage({ params }: { params: Prom
   });
   if (!profile) notFound();
 
-  const [transactions, rewards, favoriteItem] = await Promise.all([
+  const [transactions, rewards, favoriteItem, missionProducts] = await Promise.all([
     getPointsHistory(profile.id, prisma, 30),
     listActiveRewards(),
     prisma.orderItem.groupBy({
@@ -32,6 +34,7 @@ export default async function CustomerAdminDetailPage({ params }: { params: Prom
       orderBy: { _sum: { quantity: "desc" } },
       take: 1,
     }),
+    listMissionLinkedProducts(),
   ]);
 
   // Server Component rendered once per request — "current time" here is a
@@ -82,6 +85,15 @@ export default async function CustomerAdminDetailPage({ params }: { params: Prom
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrar compra</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RegisterPurchaseForm customerProfileId={profile.id} missionProducts={missionProducts} />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Agregar / restar puntos</CardTitle>

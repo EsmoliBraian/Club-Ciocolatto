@@ -56,6 +56,29 @@ export async function registerPurchaseAction(
     return { error: "Ingresá un monto válido." };
   }
 
+  // Items tagged here are for mission-tracking only (see registerOrder's
+  // itemsAffectPoints) — the flat `totalAmount` above always drives points.
+  const productIds: string[] = [];
+  const quantities = new Map<string, number>();
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("qty_")) continue;
+    const quantity = Number(value);
+    if (Number.isFinite(quantity) && quantity > 0) {
+      const productId = key.slice("qty_".length);
+      productIds.push(productId);
+      quantities.set(productId, quantity);
+    }
+  }
+  const products = productIds.length
+    ? await prisma.product.findMany({ where: { id: { in: productIds } } })
+    : [];
+  const items = products.map((product) => ({
+    productId: product.id,
+    name: product.name,
+    quantity: quantities.get(product.id) ?? 1,
+    unitPrice: Number(product.price),
+  }));
+
   try {
     const result = await registerOrder({
       customerProfileId,
@@ -65,8 +88,11 @@ export async function registerPurchaseAction(
       paymentMethod,
       externalReference,
       notes,
+      items: items.length ? items : undefined,
+      itemsAffectPoints: false,
     });
     revalidatePath(`/empleado/cliente/${customerProfileId}`);
+    revalidatePath(`/admin/clientes/${customerProfileId}`);
     return { success: true, pointsEarned: result.pointsEarned, alreadyProcessed: result.alreadyProcessed };
   } catch (error) {
     if (error instanceof OrderServiceError) return { error: error.message };

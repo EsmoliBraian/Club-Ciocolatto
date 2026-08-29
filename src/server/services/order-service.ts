@@ -31,6 +31,15 @@ export interface RegisterOrderInput {
   externalReference?: string;
   notes?: string;
   items?: RegisterOrderItemInput[];
+  /**
+   * When true (default — matches the POS integration, where item prices are
+   * real and sum to the receipt total), `items` drives both the order total
+   * and points. When false, `totalAmount` alone drives the total and points
+   * — `items` are recorded and fed to mission tracking only, for callers
+   * (the employee/admin manual flow) that tag "what was in this sale" for
+   * mission purposes without pricing each line themselves.
+   */
+  itemsAffectPoints?: boolean;
 }
 
 interface ResolvedItem {
@@ -124,6 +133,7 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
       where: { id: input.customerProfileId },
     });
 
+    const itemsAffectPoints = input.itemsAffectPoints ?? true;
     let resolvedItems: ResolvedItem[] = [];
     let totalAmount = input.totalAmount ?? 0;
 
@@ -146,10 +156,14 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
           bonusPoints: product?.bonusPoints ?? 0,
         };
       });
-      totalAmount = resolvedItems.reduce((sum, i) => sum + i.subtotal, 0);
+      if (itemsAffectPoints) {
+        totalAmount = resolvedItems.reduce((sum, i) => sum + i.subtotal, 0);
+      }
     }
 
-    const basePoints = computeOrderPoints(totalAmount, resolvedItems, config);
+    const basePoints = itemsAffectPoints
+      ? computeOrderPoints(totalAmount, resolvedItems, config)
+      : computeOrderPoints(totalAmount, [], config);
     const purchasePoints = await applyPromotions(tx, basePoints, resolvedItems);
     const isFirstOrder = profile.totalOrders === 0;
 

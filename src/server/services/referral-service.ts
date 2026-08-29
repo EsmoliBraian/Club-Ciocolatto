@@ -3,6 +3,7 @@ import type { Db } from "@/types/db";
 import { awardPoints } from "@/server/services/loyalty-service";
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
+import { evaluateReferralMissions } from "@/server/services/mission-service";
 
 export class ReferralError extends Error {
   constructor(public code: string, message: string) {
@@ -113,6 +114,10 @@ export async function completeReferralOnFirstPurchase(db: Db, refereeProfileId: 
       completedAt: new Date(),
     },
   });
+
+  // Milestone missions (e.g. "invitá a 5 amigos") — separate from the flat
+  // per-referral reward above, and the only place their progress advances.
+  await evaluateReferralMissions(db, referral.referrerId);
 
   await notify(
     {

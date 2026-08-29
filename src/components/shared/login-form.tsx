@@ -35,7 +35,12 @@ export function LoginForm({ callbackUrl, registered }: { callbackUrl?: string; r
         <Input id="email" name="email" type="email" autoComplete="username" required placeholder="vos@ejemplo.com" />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Contraseña</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="password">Contraseña</Label>
+          <Link href="/olvide-password" className="text-xs font-medium text-primary hover:underline">
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
         <Input id="password" name="password" type="password" autoComplete="current-password" required />
       </div>
 

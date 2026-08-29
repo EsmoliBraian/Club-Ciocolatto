@@ -137,11 +137,12 @@ model User {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  customerProfile   CustomerProfile?
-  employeeOrders    Order[]            @relation("OrderEmployee")
-  auditLogs         AuditLog[]         @relation("AuditActor")
-  notifications     Notification[]
-  redeemedByEntries RewardRedemption[] @relation("RedeemedByEmployee")
+  customerProfile     CustomerProfile?
+  employeeOrders      Order[]              @relation("OrderEmployee")
+  auditLogs           AuditLog[]           @relation("AuditActor")
+  notifications       Notification[]
+  redeemedByEntries   RewardRedemption[]   @relation("RedeemedByEmployee")
+  passwordResetTokens PasswordResetToken[]
 
   @@index([role])
 }
@@ -495,6 +496,21 @@ model ApiKey {
   revokedAt  DateTime?
 
   @@index([active])
+}
+
+// Single-use, short-lived token for the "forgot password" email flow. Only
+// the hash is stored (same pattern as ApiKey) so a DB leak alone can't be
+// used to reset accounts.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // Generic idempotency store for integration endpoints beyond Order's own

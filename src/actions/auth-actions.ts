@@ -4,8 +4,13 @@ import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { registerSchema } from "@/schemas/auth";
+import { registerSchema, requestPasswordResetSchema, resetPasswordSchema } from "@/schemas/auth";
 import { registerCustomer, CustomerServiceError } from "@/server/services/customer-service";
+import {
+  requestPasswordReset,
+  resetPassword,
+  PasswordResetError,
+} from "@/server/services/password-reset-service";
 
 export interface ActionState {
   error?: string;
@@ -92,4 +97,50 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/" });
+}
+
+export interface RequestPasswordResetState extends ActionState {
+  submitted?: boolean;
+}
+
+export async function requestPasswordResetAction(
+  _prev: RequestPasswordResetState,
+  formData: FormData
+): Promise<RequestPasswordResetState> {
+  const parsed = requestPasswordResetSchema.safeParse({ email: formData.get("email") });
+  if (!parsed.success) {
+    return { error: "Ingresá un email válido.", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  await requestPasswordReset(parsed.data.email);
+
+  // Always the same "submitted" result, whether or not the email matched an
+  // account — avoids leaking which emails are registered.
+  return { submitted: true };
+}
+
+export interface ResetPasswordState extends ActionState {
+  success?: boolean;
+}
+
+export async function resetPasswordAction(
+  _prev: ResetPasswordState,
+  formData: FormData
+): Promise<ResetPasswordState> {
+  const parsed = resetPasswordSchema.safeParse({
+    token: formData.get("token"),
+    password: formData.get("password"),
+  });
+  if (!parsed.success) {
+    return { error: "Revisá los datos ingresados.", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  try {
+    await resetPassword(parsed.data.token, parsed.data.password);
+  } catch (error) {
+    if (error instanceof PasswordResetError) return { error: error.message };
+    throw error;
+  }
+
+  return { success: true };
 }

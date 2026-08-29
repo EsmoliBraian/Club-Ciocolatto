@@ -176,6 +176,73 @@ async function claimMissionReward(
   );
 }
 
+/**
+ * Advances every active REFERRAL mission for a sponsor after one of their
+ * referrals completes. REFERRAL isn't order-driven (evaluateMissionsForOrder
+ * skips it), so this is the only place referral-mission progress is ever
+ * written — call it from completeReferralOnFirstPurchase. Reuses
+ * applyMissionProgress so a milestone ladder (e.g. 1/5/10 friends) just
+ * needs one Mission row per milestone; each tracks and pays out independently.
+ */
+export async function evaluateReferralMissions(
+  db: Db,
+  customerProfileId: string
+): Promise<MissionEvaluationResult[]> {
+  const now = new Date();
+  const missions = await db.mission.findMany({
+    where: {
+      active: true,
+      type: "REFERRAL",
+      OR: [{ startAt: null }, { startAt: { lte: now } }],
+    },
+  });
+  const applicable = missions.filter((m) => !m.endAt || m.endAt >= now);
+  if (applicable.length === 0) return [];
+
+  const completedCount = await db.referral.count({
+    where: { referrerId: customerProfileId, status: "COMPLETED" },
+  });
+
+  const results: MissionEvaluationResult[] = [];
+  for (const mission of applicable) {
+    const cycleKey = computeCycleKey(mission);
+    const existing = await db.missionProgress.findUnique({
+      where: { missionId_customerProfileId_cycleKey: { missionId: mission.id, customerProfileId, cycleKey } },
+    });
+    if (existing && existing.status !== "IN_PROGRESS") continue;
+
+    const increment = completedCount - (existing?.currentValue ?? 0);
+    if (increment <= 0) continue;
+
+    const applied = await applyMissionProgress(db, mission, customerProfileId, increment);
+    if (applied) results.push(applied);
+  }
+  return results;
+}
+
+/** Products actually referenced by an active PRODUCT_PURCHASE mission — the
+ * curated list an employee/admin can tag on a manual purchase, so a checkout
+ * never offers a product with no mission behind it. */
+export async function listMissionLinkedProducts(db: Db = prisma) {
+  const now = new Date();
+  const missions = await db.mission.findMany({
+    where: {
+      active: true,
+      type: "PRODUCT_PURCHASE",
+      productId: { not: null },
+      OR: [{ startAt: null }, { startAt: { lte: now } }],
+    },
+    include: { product: true },
+  });
+  const applicable = missions.filter((m) => !m.endAt || m.endAt >= now);
+
+  const byId = new Map<string, NonNullable<(typeof applicable)[number]["product"]>>();
+  for (const mission of applicable) {
+    if (mission.product?.active) byId.set(mission.product.id, mission.product);
+  }
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
 export interface MissionWithProgress {
   mission: Mission;
   currentValue: number;

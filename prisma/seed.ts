@@ -102,6 +102,7 @@ async function main() {
       { name: "Torta de chocolate", category: "Chocolate", price: 4200, bonusPoints: 0 },
       { name: "Alfajor de chocolate", category: "Chocolate", price: 1500, bonusPoints: 5 },
       { name: "Bombones surtidos", category: "Chocolate", price: 3900, bonusPoints: 0 },
+      { name: "Torta de cumpleaños", category: "Tortas", price: 9500, bonusPoints: 0 },
     ].map((p) =>
       prisma.product.upsert({
         where: { externalSku: `SEED-${p.name.toUpperCase().replace(/\s+/g, "-")}` },
@@ -111,6 +112,7 @@ async function main() {
     )
   );
   const cafe = products.find((p) => p.name === "Café")!;
+  const tortaCumple = products.find((p) => p.name === "Torta de cumpleaños")!;
 
   await Promise.all([
     prisma.reward.upsert({
@@ -228,16 +230,53 @@ async function main() {
     }),
     prisma.mission.upsert({
       where: { id: "seed-mission-referido" },
-      update: {},
+      update: {
+        name: "Invitá a 5 amigos",
+        description: "Sumá 5 amigos que hagan su primera compra y ganá un bono extra.",
+        targetValue: 5,
+        rewardPoints: 150,
+        perUserLimit: 1,
+      },
       create: {
         id: "seed-mission-referido",
-        name: "Invitá un amigo",
-        description: "Cuando tu amigo haga su primera compra, ganás puntos.",
+        name: "Invitá a 5 amigos",
+        description: "Sumá 5 amigos que hagan su primera compra y ganá un bono extra.",
         icon: "🤝",
         type: "REFERRAL",
+        targetValue: 5,
+        rewardPoints: 150,
+        perUserLimit: 1,
+        active: true,
+      },
+    }),
+    prisma.mission.upsert({
+      where: { id: "seed-mission-referido-10" },
+      update: {},
+      create: {
+        id: "seed-mission-referido-10",
+        name: "Invitá a 10 amigos",
+        description: "Llegá a 10 amigos referidos y ganá el bono más grande del Club.",
+        icon: "🎉",
+        type: "REFERRAL",
+        targetValue: 10,
+        rewardPoints: 300,
+        perUserLimit: 1,
+        active: true,
+      },
+    }),
+    prisma.mission.upsert({
+      where: { id: "seed-mission-torta-cumple" },
+      update: {},
+      create: {
+        id: "seed-mission-torta-cumple",
+        name: "Pedí tu torta de cumpleaños",
+        description: "Encargá tu torta de cumpleaños en Ciocolatto y ganá puntos extra.",
+        icon: "🎂",
+        type: "PRODUCT_PURCHASE",
         targetValue: 1,
-        rewardPoints: 100,
-        perUserLimit: 999,
+        productId: tortaCumple.id,
+        rewardPoints: 200,
+        perUserLimit: 12,
         active: true,
       },
     }),

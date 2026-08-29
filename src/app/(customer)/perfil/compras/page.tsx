@@ -3,11 +3,11 @@ import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { getOrderHistory } from "@/server/services/order-service";
 import { BackHeader } from "@/components/shared/back-header";
-import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export const metadata: Metadata = { title: "Historial de compras" };
+export const metadata: Metadata = { title: "Historial de puntos recibidos" };
 
 export default async function PurchaseHistoryPage() {
   const session = await auth();
@@ -18,12 +18,12 @@ export default async function PurchaseHistoryPage() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
-      <BackHeader title="Historial de compras" />
+      <BackHeader title="Historial de puntos recibidos" />
 
       {orders.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Todavía no registraste compras.
+            Todavía no tenés visitas registradas.
           </CardContent>
         </Card>
       ) : (
@@ -40,10 +40,7 @@ export default async function PurchaseHistoryPage() {
                     {order.items.map((i) => `${i.name} x${i.quantity}`).join(", ")}
                   </p>
                 )}
-                <div className="flex items-center justify-between">
-                  <p className="font-heading font-semibold">{formatCurrency(Number(order.totalAmount))}</p>
-                  <p className="text-sm font-medium text-primary">+{order.pointsEarned} puntos</p>
-                </div>
+                <p className="font-heading font-semibold text-primary">+{order.pointsEarned} puntos</p>
               </CardContent>
             </Card>
           ))}

@@ -4,6 +4,7 @@ import { Star } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ADMIN_ROLES } from "@/lib/rbac";
+import { listMissionLinkedProducts } from "@/server/services/mission-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +17,13 @@ export default async function EmployeeCustomerPage({ params }: { params: Promise
   const { id } = await params;
   const session = await auth();
 
-  const profile = await prisma.customerProfile.findUnique({
-    where: { id },
-    include: { user: true, tier: true },
-  });
+  const [profile, missionProducts] = await Promise.all([
+    prisma.customerProfile.findUnique({
+      where: { id },
+      include: { user: true, tier: true },
+    }),
+    listMissionLinkedProducts(),
+  ]);
   if (!profile) notFound();
 
   const allowNegative = ADMIN_ROLES.includes(session!.user.role);
@@ -56,7 +60,7 @@ export default async function EmployeeCustomerPage({ params }: { params: Promise
           <CardTitle>Registrar compra</CardTitle>
         </CardHeader>
         <CardContent>
-          <RegisterPurchaseForm customerProfileId={profile.id} />
+          <RegisterPurchaseForm customerProfileId={profile.id} missionProducts={missionProducts} />
         </CardContent>
       </Card>
 
