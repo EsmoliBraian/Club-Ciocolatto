@@ -39,7 +39,13 @@ export default function WelcomePage() {
           </Link>
         </div>
 
-        <div className="relative mt-8 h-44 w-full flex-1 overflow-hidden rounded-3xl ring-1 ring-cc-cream-50/10">
+        <div
+          className="relative mt-8 h-56 w-full flex-1"
+          style={{
+            maskImage: "radial-gradient(ellipse 78% 72% at 50% 42%, black 38%, transparent 88%)",
+            WebkitMaskImage: "radial-gradient(ellipse 78% 72% at 50% 42%, black 38%, transparent 88%)",
+          }}
+        >
           <Image
             src="/cafe-interior.png"
             alt="El local de Ciocolatto"
@@ -48,7 +54,6 @@ export default function WelcomePage() {
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-cc-green-900/40 via-transparent to-transparent" />
         </div>
       </div>
     </main>
