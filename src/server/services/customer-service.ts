@@ -3,7 +3,7 @@ import type { Db } from "@/types/db";
 import { hashPassword } from "@/lib/password";
 import { buildReferralCodeCandidate, generateQrToken } from "@/lib/codes";
 import { awardPoints } from "@/server/services/loyalty-service";
-import { validateReferralCode, createReferral } from "@/server/services/referral-service";
+import { validateReferralCode, createReferral, ReferralError } from "@/server/services/referral-service";
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { grantFreeReward } from "@/server/services/reward-service";
@@ -46,9 +46,17 @@ export async function registerCustomer(input: RegisterInput) {
     );
   }
 
-  const referrer = input.referralCode
-    ? await validateReferralCode(input.referralCode, { email: input.email, phone: input.phone })
-    : null;
+  let referrer: Awaited<ReturnType<typeof validateReferralCode>> | null = null;
+  if (input.referralCode) {
+    try {
+      referrer = await validateReferralCode(input.referralCode, { email: input.email, phone: input.phone });
+    } catch (error) {
+      // Normalized to CustomerServiceError so callers (the register server action)
+      // only need to handle one error type instead of also importing ReferralError.
+      if (error instanceof ReferralError) throw new CustomerServiceError(error.code, error.message);
+      throw error;
+    }
+  }
 
   const [passwordHash, config] = await Promise.all([
     hashPassword(input.password),

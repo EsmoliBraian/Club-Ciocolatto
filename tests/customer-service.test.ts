@@ -1,8 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
-import { claimBirthdayReward, isBirthdayWindowActive, CustomerServiceError } from "@/server/services/customer-service";
+import {
+  claimBirthdayReward,
+  isBirthdayWindowActive,
+  registerCustomer,
+  CustomerServiceError,
+} from "@/server/services/customer-service";
 import { createTestCustomer, cleanupTestCustomer } from "./helpers";
 import { BIRTHDAY_COFFEE_REWARD_ID } from "@/lib/constants";
+import type { RegisterInput } from "@/schemas/auth";
 
 describe("customer-service: claimBirthdayReward", () => {
   let userId: string;
@@ -58,5 +65,55 @@ describe("customer-service: claimBirthdayReward", () => {
     await prisma.user.update({ where: { id: userId }, data: { birthDate: farBirthday } });
 
     await expect(claimBirthdayReward(profileId)).rejects.toBeInstanceOf(CustomerServiceError);
+  });
+});
+
+describe("customer-service: registerCustomer referral handling", () => {
+  function buildInput(overrides: Partial<RegisterInput> = {}): RegisterInput {
+    const suffix = randomUUID().slice(0, 8);
+    return {
+      firstName: "Nueva",
+      lastName: suffix,
+      email: `nueva-${suffix}@example.com`,
+      phone: `+549nueva${suffix}`,
+      password: "Test1234!",
+      birthDate: new Date("1995-01-01"),
+      favoriteDrink: "Latte",
+      acceptedTerms: true,
+      acceptedMarketing: false,
+      ...overrides,
+    };
+  }
+
+  it("surfaces an invalid referral code as CustomerServiceError instead of crashing", async () => {
+    const input = buildInput({ referralCode: "NOEXISTE99" });
+    await expect(registerCustomer(input)).rejects.toBeInstanceOf(CustomerServiceError);
+
+    // No account should have been created when registration is rejected up front.
+    const created = await prisma.user.findUnique({ where: { email: input.email } });
+    expect(created).toBeNull();
+  });
+
+  it("surfaces a self-referral code as CustomerServiceError instead of crashing", async () => {
+    const { user, profile } = await createTestCustomer();
+    try {
+      const input = buildInput({ email: user.email, phone: user.phone!, referralCode: profile.referralCode });
+      await expect(registerCustomer(input)).rejects.toBeInstanceOf(CustomerServiceError);
+    } finally {
+      await cleanupTestCustomer(user.id);
+    }
+  });
+
+  it("links a valid referral code to the new account", async () => {
+    const sponsor = await createTestCustomer();
+    const input = buildInput({ referralCode: sponsor.profile.referralCode });
+    try {
+      const { user } = await registerCustomer(input);
+      const referral = await prisma.referral.findFirst({ where: { referrerId: sponsor.profile.id } });
+      expect(referral?.codeUsed).toBe(sponsor.profile.referralCode);
+      await cleanupTestCustomer(user.id);
+    } finally {
+      await cleanupTestCustomer(sponsor.user.id);
+    }
   });
 });

@@ -81,7 +81,17 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Contraseña</Label>
         <Input id="password" name="password" type="password" required autoComplete="new-password" />
-        {errors.password && <p className="text-xs text-destructive">{errors.password[0]}</p>}
+        {errors.password ? (
+          <ul className="list-disc pl-4 text-xs text-destructive">
+            {errors.password.map((msg) => (
+              <li key={msg}>{msg}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Mínimo 8 caracteres, con una mayúscula, una minúscula y un número.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
