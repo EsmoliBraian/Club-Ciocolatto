@@ -60,6 +60,7 @@ export async function registerAction(_prev: ActionState, formData: FormData): Pr
     phone: formData.get("phone"),
     password: formData.get("password"),
     birthDate: formData.get("birthDate"),
+    favoriteDrink: formData.get("favoriteDrink"),
     acceptedTerms: formData.get("acceptedTerms") === "on",
     acceptedMarketing: formData.get("acceptedMarketing") === "on",
     referralCode: referralCode || undefined,
