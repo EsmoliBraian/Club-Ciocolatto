@@ -42,58 +42,78 @@ async function main() {
     },
   });
 
-  const [amigo, fan, fanatico] = await Promise.all([
-    prisma.loyaltyTier.upsert({
-      where: { slug: "amigo-ciocolatto" },
-      update: {},
-      create: {
-        name: "Amigo Ciocolatto",
-        slug: "amigo-ciocolatto",
-        minimumPoints: 0,
-        maximumPoints: 199,
-        description: "Bienvenido al Club — empezá a sumar en cada visita.",
-        icon: "🥉",
-        color: "#8a9b6e",
-        displayOrder: 1,
-        benefits: ["Acceso al Club", "Sumás puntos en cada compra", "Misiones", "Regalo de cumpleaños"],
-      },
-    }),
-    prisma.loyaltyTier.upsert({
-      where: { slug: "fan-ciocolatto" },
-      update: {},
-      create: {
-        name: "Fan Ciocolatto",
-        slug: "fan-ciocolatto",
-        minimumPoints: 200,
-        maximumPoints: 499,
-        description: "Ya sos parte de la familia Ciocolatto.",
-        icon: "🥈",
-        color: "#c89b3c",
-        displayOrder: 2,
-        benefits: ["Todo lo anterior", "5% OFF en productos seleccionados", "Promociones exclusivas"],
-      },
-    }),
-    prisma.loyaltyTier.upsert({
-      where: { slug: "fanatico-ciocolatto" },
-      update: {},
-      create: {
-        name: "Fanático Ciocolatto",
-        slug: "fanatico-ciocolatto",
-        minimumPoints: 500,
-        maximumPoints: null,
-        description: "El nivel más alto del Club.",
-        icon: "🥇",
-        color: "#1c4328",
-        displayOrder: 3,
-        benefits: [
-          "Todo lo anterior",
-          "10% OFF en productos seleccionados",
-          "Beneficios especiales",
-          "Lanzamientos anticipados",
-          "Eventos exclusivos",
-        ],
-      },
-    }),
+  // "Insignias de Prestigio" — 5 niveles (antes eran 3; Fanático ya no es el
+  // techo, ahora sigue Experto y Leyenda). update: se re-aplica siempre para
+  // que un reseed corrija tiers ya existentes en producción, no solo cree
+  // los nuevos.
+  const amigoData = {
+    name: "Amigo Ciocolatto",
+    slug: "amigo-ciocolatto",
+    minimumPoints: 0,
+    maximumPoints: 199,
+    description: "El comienzo de una gran historia.",
+    icon: "☕",
+    color: "#8a6a4a",
+    displayOrder: 1,
+    benefits: ["Acceso al Club", "Sumás puntos en cada compra", "Misiones", "Regalo de cumpleaños"],
+  };
+  const fanData = {
+    name: "Fan Ciocolatto",
+    slug: "fan-ciocolatto",
+    minimumPoints: 200,
+    maximumPoints: 499,
+    description: "Disfrutás, volvés y sumás.",
+    icon: "🥐",
+    color: "#7c8a76",
+    displayOrder: 2,
+    benefits: ["Todo lo anterior", "5% OFF en productos seleccionados", "Promociones exclusivas"],
+  };
+  const fanaticoData = {
+    name: "Fanático Ciocolatto",
+    slug: "fanatico-ciocolatto",
+    minimumPoints: 500,
+    maximumPoints: 999,
+    description: "Sos parte de nuestra esencia.",
+    icon: "🍰",
+    color: "#c89b3c",
+    displayOrder: 3,
+    benefits: ["Todo lo anterior", "10% OFF en productos seleccionados", "Beneficios especiales"],
+  };
+  const expertoData = {
+    name: "Experto Ciocolatto",
+    slug: "experto-ciocolatto",
+    minimumPoints: 1000,
+    maximumPoints: 1999,
+    description: "Vivís Ciocolatto al máximo.",
+    icon: "🏆",
+    color: "#285c3a",
+    displayOrder: 4,
+    benefits: ["Todo lo anterior", "15% OFF en productos seleccionados", "Lanzamientos anticipados", "Atención preferencial"],
+  };
+  const leyendaData = {
+    name: "Leyenda Ciocolatto",
+    slug: "leyenda-ciocolatto",
+    minimumPoints: 2000,
+    maximumPoints: null,
+    description: "Inspirás. Sos leyenda Ciocolatto.",
+    icon: "👑",
+    color: "#b8860b",
+    displayOrder: 5,
+    benefits: [
+      "Todo lo anterior",
+      "20% OFF en productos seleccionados",
+      "Eventos exclusivos",
+      "Beneficios personalizados",
+      "Reconocimiento especial en el local",
+    ],
+  };
+
+  const [amigo, fan, fanatico, experto, leyenda] = await Promise.all([
+    prisma.loyaltyTier.upsert({ where: { slug: amigoData.slug }, update: amigoData, create: amigoData }),
+    prisma.loyaltyTier.upsert({ where: { slug: fanData.slug }, update: fanData, create: fanData }),
+    prisma.loyaltyTier.upsert({ where: { slug: fanaticoData.slug }, update: fanaticoData, create: fanaticoData }),
+    prisma.loyaltyTier.upsert({ where: { slug: expertoData.slug }, update: expertoData, create: expertoData }),
+    prisma.loyaltyTier.upsert({ where: { slug: leyendaData.slug }, update: leyendaData, create: leyendaData }),
   ]);
 
   const products = await Promise.all(
@@ -433,7 +453,7 @@ async function main() {
   }
 
   console.log("Seed complete.");
-  console.log(`  Tiers: ${[amigo, fan, fanatico].map((t) => t.name).join(", ")}`);
+  console.log(`  Tiers: ${[amigo, fan, fanatico, experto, leyenda].map((t) => t.name).join(", ")}`);
 }
 
 main()
