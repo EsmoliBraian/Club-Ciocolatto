@@ -111,7 +111,7 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
           <Checkbox name="acceptedTerms" required className="mt-0.5" />
           <span>
             Acepto los{" "}
-            <Link href="/terminos" className="text-primary hover:underline">
+            <Link href="/terminos" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               términos y condiciones
             </Link>{" "}
             y la política de privacidad.
