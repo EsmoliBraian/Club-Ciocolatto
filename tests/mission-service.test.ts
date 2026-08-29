@@ -1,8 +1,35 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { evaluateMissionsForOrder, getMissionsForCustomer } from "@/server/services/mission-service";
+import {
+  evaluateMissionsForOrder,
+  getMissionsForCustomer,
+  filterVisibleMissions,
+  type MissionWithProgress,
+} from "@/server/services/mission-service";
 import { createTestCustomer, cleanupTestCustomer } from "./helpers";
 import { randomUUID } from "crypto";
+
+function fakeMission(overrides: Partial<MissionWithProgress["mission"]> & { targetValue: number }): MissionWithProgress["mission"] {
+  return {
+    id: `fake-${overrides.targetValue}-${Math.random()}`,
+    name: `Invitá a ${overrides.targetValue} amigos`,
+    description: "test",
+    icon: null,
+    type: "REFERRAL",
+    productId: null,
+    category: null,
+    rewardPoints: 0,
+    rewardId: null,
+    startAt: null,
+    endAt: null,
+    perUserLimit: 1,
+    segment: null,
+    active: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
 
 describe("mission-service: evaluateMissionsForOrder", () => {
   let userId: string;
@@ -85,5 +112,47 @@ describe("mission-service: evaluateMissionsForOrder", () => {
       where: { customerProfileId: profileId, referenceType: "Mission", referenceId: missionId },
     });
     expect(missionPointTransactionsAfterExtra).toBe(1);
+  });
+});
+
+describe("mission-service: filterVisibleMissions", () => {
+  it("shows only the lowest not-yet-claimed REFERRAL tier, hiding higher ones until unlocked", () => {
+    const missions: MissionWithProgress[] = [
+      { mission: fakeMission({ targetValue: 1 }), currentValue: 0, status: "IN_PROGRESS" },
+      { mission: fakeMission({ targetValue: 5 }), currentValue: 0, status: "IN_PROGRESS" },
+      { mission: fakeMission({ targetValue: 10 }), currentValue: 0, status: "IN_PROGRESS" },
+    ];
+
+    const visible = filterVisibleMissions(missions);
+    expect(visible).toHaveLength(1);
+    expect(visible[0].mission.targetValue).toBe(1);
+  });
+
+  it("unlocks the next tier once the current one is REWARD_CLAIMED, carrying the already-earned progress", () => {
+    const missions: MissionWithProgress[] = [
+      { mission: fakeMission({ targetValue: 1 }), currentValue: 1, status: "REWARD_CLAIMED" },
+      { mission: fakeMission({ targetValue: 5 }), currentValue: 1, status: "IN_PROGRESS" },
+      { mission: fakeMission({ targetValue: 10 }), currentValue: 1, status: "IN_PROGRESS" },
+    ];
+
+    const visible = filterVisibleMissions(missions);
+    // The claimed tier still shows (it belongs in "Completadas"); the next
+    // one shows too, already reading "1/5" instead of restarting at "0/5".
+    expect(visible.map((m) => m.mission.targetValue)).toEqual([1, 5]);
+    const nextTier = visible.find((m) => m.mission.targetValue === 5)!;
+    expect(nextTier.currentValue).toBe(1);
+    expect(nextTier.status).toBe("IN_PROGRESS");
+  });
+
+  it("leaves non-REFERRAL missions untouched", () => {
+    const missions: MissionWithProgress[] = [
+      { mission: fakeMission({ targetValue: 1 }), currentValue: 0, status: "IN_PROGRESS" },
+      { mission: fakeMission({ targetValue: 5 }), currentValue: 0, status: "IN_PROGRESS" },
+      { mission: { ...fakeMission({ targetValue: 3 }), type: "VISIT_COUNT" }, currentValue: 1, status: "IN_PROGRESS" },
+    ];
+
+    const visible = filterVisibleMissions(missions);
+    expect(visible).toHaveLength(2); // the VISIT_COUNT mission + only the first REFERRAL tier
+    expect(visible.some((m) => m.mission.type === "VISIT_COUNT")).toBe(true);
   });
 });

@@ -470,7 +470,11 @@ model LoyaltyConfig {
   registrationPoints        Int      @default(30)
   firstPurchasePoints       Int      @default(50)
   birthdayPoints            Int      @default(100)
-  referralSponsorPoints     Int      @default(50)
+  // Flat per-referral bonus, superseded by the REFERRAL mission ladder
+  // (1/5/10 friends — see prisma/seed.ts) as of 2026-08-29; kept at 0 so a
+  // completed referral isn't paid twice. Still admin-editable if a flat
+  // top-up on top of the ladder is ever wanted again.
+  referralSponsorPoints     Int      @default(0)
   referralRefereePoints     Int      @default(100)
   pointsExpireAfterDays     Int? // null = points never expire
   redemptionCodeExpiryHours Int      @default(72)

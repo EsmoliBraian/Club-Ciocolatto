@@ -23,7 +23,10 @@ async function main() {
 
   await prisma.loyaltyConfig.upsert({
     where: { id: "singleton" },
-    update: {},
+    // referralSponsorPoints explicitly re-applied on existing rows too: the
+    // flat per-referral bonus was replaced by the REFERRAL mission ladder
+    // (1/5/10 friends below), so it must stay 0 to avoid paying twice.
+    update: { referralSponsorPoints: 0 },
     create: {
       id: "singleton",
       amountPerPoint: 1000,
@@ -31,7 +34,7 @@ async function main() {
       registrationPoints: 30,
       firstPurchasePoints: 50,
       birthdayPoints: 100,
-      referralSponsorPoints: 50,
+      referralSponsorPoints: 0,
       referralRefereePoints: 100,
       redemptionCodeExpiryHours: 72,
       businessName: "Ciocolatto",
@@ -225,6 +228,21 @@ async function main() {
         targetValue: 3,
         rewardPoints: 100,
         perUserLimit: 12,
+        active: true,
+      },
+    }),
+    prisma.mission.upsert({
+      where: { id: "seed-mission-referido-1" },
+      update: {},
+      create: {
+        id: "seed-mission-referido-1",
+        name: "Invitá a un amigo",
+        description: "Cuando tu amigo haga su primera compra, ganás puntos.",
+        icon: "🤝",
+        type: "REFERRAL",
+        targetValue: 1,
+        rewardPoints: 50,
+        perUserLimit: 1,
         active: true,
       },
     }),

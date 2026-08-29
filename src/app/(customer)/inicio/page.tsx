@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId, isBirthdayWindowActive } from "@/server/services/customer-service";
 import { listActiveTiersCached, calculateTierProgress } from "@/server/services/tier-service";
 import { listRewardsForCustomer } from "@/server/services/reward-service";
-import { getMissionsForCustomer } from "@/server/services/mission-service";
+import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
@@ -23,7 +23,7 @@ export default async function CustomerHomePage() {
   const tiers = await listActiveTiersCached();
   const progress = calculateTierProgress(profile.lifetimePoints, tiers);
   const rewards = await listRewardsForCustomer(profile.id);
-  const missions = await getMissionsForCustomer(profile.id);
+  const missions = filterVisibleMissions(await getMissionsForCustomer(profile.id));
 
   const nextBenefit =
     rewards.find((r) => !r.eligible && r.reason === "INSUFFICIENT_POINTS") ??

@@ -277,3 +277,23 @@ export async function getMissionsForCustomer(
     };
   });
 }
+
+/**
+ * A REFERRAL ladder (e.g. 1 → 5 → 10 friends) reads as one evolving mission,
+ * not N separate cards fighting for attention — so only the lowest
+ * not-yet-rewarded tier is shown. Completed tiers still surface normally
+ * (they land in "Completadas" via their REWARD_CLAIMED status); tiers past
+ * the current one stay hidden until it's cleared, which is the "unlock"
+ * effect. Every other mission type passes through untouched.
+ */
+export function filterVisibleMissions(missions: MissionWithProgress[]): MissionWithProgress[] {
+  const referral = missions
+    .filter((m) => m.mission.type === "REFERRAL")
+    .sort((a, b) => a.mission.targetValue - b.mission.targetValue);
+  const others = missions.filter((m) => m.mission.type !== "REFERRAL");
+
+  const claimed = referral.filter((m) => m.status === "REWARD_CLAIMED");
+  const nextTier = referral.find((m) => m.status !== "REWARD_CLAIMED");
+
+  return [...others, ...claimed, ...(nextTier ? [nextTier] : [])];
+}

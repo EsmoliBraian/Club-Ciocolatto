@@ -61,7 +61,7 @@ describe("referral-service", () => {
     }
   });
 
-  it("completes on the referee's first purchase and awards points to both sides exactly once", async () => {
+  it("completes on the referee's first purchase and awards the referee's welcome bonus exactly once", async () => {
     await createReferral(prisma, {
       referrerProfileId: referrer.profile.id,
       refereeProfileId: referee.profile.id,
@@ -77,24 +77,25 @@ describe("referral-service", () => {
 
     const referral = await prisma.referral.findUniqueOrThrow({ where: { refereeId: referee.profile.id } });
     expect(referral.status).toBe("COMPLETED");
-    expect(referral.referrerPointsAwarded).toBeGreaterThan(0);
+    // referrerPointsAwarded is 0 by default — the flat per-referral sponsor
+    // bonus was replaced by the REFERRAL mission ladder (1/5/10 friends),
+    // covered separately below. The referee's one-time welcome bonus is the
+    // part still driven by LoyaltyConfig here.
+    expect(referral.refereePointsAwarded).toBeGreaterThan(0);
 
-    // Scoped to the flat per-referral bonus specifically — not the referrer's
-    // overall balance, which may also include unrelated milestone-mission
-    // rewards (e.g. "invitá a 5 amigos") depending on what's seeded.
-    const sponsorTx = await prisma.pointTransaction.findMany({
-      where: { customerProfileId: referrer.profile.id, source: "REFERRAL_SPONSOR" },
+    const refereeTx = await prisma.pointTransaction.findMany({
+      where: { customerProfileId: referee.profile.id, source: "REFERRAL_REFEREE" },
     });
-    expect(sponsorTx).toHaveLength(1);
-    expect(sponsorTx[0].amount).toBe(referral.referrerPointsAwarded);
+    expect(refereeTx).toHaveLength(1);
+    expect(refereeTx[0].amount).toBe(referral.refereePointsAwarded);
 
     // A second purchase must not re-trigger completion or award points again.
     const second = await completeReferralOnFirstPurchase(prisma, referee.profile.id);
     expect(second).toBeNull();
-    const sponsorTxAfter = await prisma.pointTransaction.findMany({
-      where: { customerProfileId: referrer.profile.id, source: "REFERRAL_SPONSOR" },
+    const refereeTxAfter = await prisma.pointTransaction.findMany({
+      where: { customerProfileId: referee.profile.id, source: "REFERRAL_REFEREE" },
     });
-    expect(sponsorTxAfter).toHaveLength(1);
+    expect(refereeTxAfter).toHaveLength(1);
   });
 
   it("pays out a referral milestone mission once the target is reached, and only once", async () => {

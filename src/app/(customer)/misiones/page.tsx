@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Trophy } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
-import { getMissionsForCustomer } from "@/server/services/mission-service";
+import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
 import { MissionCard } from "@/components/customer/mission-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -13,7 +13,7 @@ export default async function MissionsPage() {
   const profile = await getCustomerProfileByUserId(session!.user.id);
   if (!profile) return null;
 
-  const missions = await getMissionsForCustomer(profile.id);
+  const missions = filterVisibleMissions(await getMissionsForCustomer(profile.id));
 
   const all = missions.map((m) => ({
     mission: m.mission,
