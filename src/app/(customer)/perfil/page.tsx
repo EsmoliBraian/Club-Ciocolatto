@@ -3,8 +3,9 @@ import Link from "next/link";
 import { ChevronRight, UserCog, Receipt, Star, Gift as GiftIcon, Users, Sparkles, Activity } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
+import { AvatarUpload } from "@/components/customer/avatar-upload";
+import { TierBadgeButton } from "@/components/customer/tier-badge-button";
 
 export const metadata: Metadata = { title: "Perfil" };
 
@@ -30,20 +31,17 @@ export default async function ProfilePage() {
       <h1 className="font-heading text-xl font-semibold text-foreground">Mi perfil</h1>
 
       <div className="flex items-center gap-4">
-        <Avatar className="size-16">
-          <AvatarFallback className="bg-cc-gold-400 font-heading text-xl text-cc-green-900">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <p className="font-heading text-lg font-semibold text-foreground">
+        <AvatarUpload avatarUrl={profile.user.avatarUrl} initials={initials} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-heading text-lg font-semibold text-foreground">
             {profile.user.firstName} {profile.user.lastName}
           </p>
-          <p className="text-sm text-muted-foreground">{profile.user.email}</p>
+          <p className="truncate text-sm text-muted-foreground">{profile.user.email}</p>
           <p className="mt-0.5 text-xs font-medium text-primary">
             {profile.tier?.icon} {profile.tier?.name ?? "Amigo Ciocolatto"}
           </p>
         </div>
+        <TierBadgeButton icon={profile.tier?.icon ?? null} name={profile.tier?.name ?? "Amigo Ciocolatto"} color={profile.tier?.color ?? null} />
       </div>
 
       <div className="flex flex-col divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">

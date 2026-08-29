@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { put, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireCustomerProfile } from "@/lib/rbac";
 import { claimBirthdayReward, CustomerServiceError } from "@/server/services/customer-service";
 import { redeemReward as redeemRewardService, RewardRedemptionError } from "@/server/services/reward-service";
 import { updateProfileSchema } from "@/schemas/auth";
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export interface UpdateProfileState {
   error?: string;
@@ -40,6 +44,47 @@ export async function updateProfileAction(
   revalidatePath("/perfil");
   revalidatePath("/perfil/datos");
   return { success: true };
+}
+
+export interface UploadAvatarState {
+  error?: string;
+  avatarUrl?: string;
+}
+
+export async function uploadAvatarAction(
+  _prev: UploadAvatarState,
+  formData: FormData
+): Promise<UploadAvatarState> {
+  const { user } = await requireCustomerProfile();
+
+  const file = formData.get("avatar");
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Elegí una imagen." };
+  }
+  if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
+    return { error: "La imagen debe ser JPG, PNG, WEBP o GIF." };
+  }
+  if (file.size > MAX_AVATAR_BYTES) {
+    return { error: "La imagen no puede pesar más de 5MB." };
+  }
+
+  const previous = await prisma.user.findUnique({ where: { id: user.id }, select: { avatarUrl: true } });
+
+  const ext = file.type.split("/")[1];
+  const blob = await put(`avatars/${user.id}-${Date.now()}.${ext}`, file, {
+    access: "public",
+    addRandomSuffix: false,
+  });
+
+  await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: blob.url } });
+
+  if (previous?.avatarUrl) {
+    await del(previous.avatarUrl).catch(() => {});
+  }
+
+  revalidatePath("/perfil");
+  revalidatePath("/inicio");
+  return { avatarUrl: blob.url };
 }
 
 export async function claimBirthdayRewardAction() {

@@ -10,7 +10,7 @@ import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
 import { MissionCard } from "@/components/customer/mission-card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Inicio" };
@@ -47,9 +47,12 @@ export default async function CustomerHomePage() {
         <h1 className="font-heading text-xl font-semibold text-foreground">
           Hola, {profile.user.firstName} 👋
         </h1>
-        <Avatar className="size-10">
-          <AvatarFallback className="bg-cc-gold-400 font-heading text-cc-green-900">{initials}</AvatarFallback>
-        </Avatar>
+        <Link href="/perfil">
+          <Avatar className="size-10">
+            {profile.user.avatarUrl && <AvatarImage src={profile.user.avatarUrl} alt="" />}
+            <AvatarFallback className="bg-cc-gold-400 font-heading text-cc-green-900">{initials}</AvatarFallback>
+          </Avatar>
+        </Link>
       </div>
 
       {showBirthday && <BirthdayBanner favoriteDrink={profile.user.favoriteDrink} />}
