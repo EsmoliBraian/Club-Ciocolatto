@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Gift, Star } from "lucide-react";
+import { Gift, Star, Lock } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { listRewardsForCustomer, type RewardEligibility } from "@/server/services/reward-service";
@@ -69,7 +69,7 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
       {items.map(({ reward, eligible, reason }) => (
         <div
           key={reward.id}
-          className={`flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm ${!eligible ? "opacity-60" : ""}`}
+          className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
         >
           <span className="text-2xl">{reward.icon ?? "🎁"}</span>
           <div className="min-h-8">
@@ -88,7 +88,8 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
               size="sm"
             />
           ) : (
-            <Button size="sm" variant="outline" disabled>
+            <Button size="sm" variant="outline" disabled className="text-muted-foreground opacity-70">
+              <Lock className="size-3" />
               {reason ? REASON_LABEL[reason] : "No disponible"}
             </Button>
           )}

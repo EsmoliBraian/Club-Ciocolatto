@@ -35,16 +35,9 @@ export default async function CustomersAdminPage({
   const q = params.q?.trim();
   const tierSlug = params.tier;
 
-  const tiers = await prisma.loyaltyTier.findMany({ orderBy: { displayOrder: "asc" } });
-
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const activeSince = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const [totalCustomers, activeCustomers, newThisMonth] = await Promise.all([
-    prisma.customerProfile.count(),
-    prisma.customerProfile.count({ where: { lastOrderAt: { gte: activeSince } } }),
-    prisma.customerProfile.count({ where: { createdAt: { gte: startOfMonth } } }),
-  ]);
 
   const where: Prisma.CustomerProfileWhereInput = {
     ...(q
@@ -62,7 +55,12 @@ export default async function CustomersAdminPage({
     ...(tierSlug ? { tier: { slug: tierSlug } } : {}),
   };
 
-  const [total, customers] = await Promise.all([
+  // All six reads are independent of each other — one round trip instead of three.
+  const [tiers, totalCustomers, activeCustomers, newThisMonth, total, customers] = await Promise.all([
+    prisma.loyaltyTier.findMany({ orderBy: { displayOrder: "asc" } }),
+    prisma.customerProfile.count(),
+    prisma.customerProfile.count({ where: { lastOrderAt: { gte: activeSince } } }),
+    prisma.customerProfile.count({ where: { createdAt: { gte: startOfMonth } } }),
     prisma.customerProfile.count({ where }),
     prisma.customerProfile.findMany({
       where,

@@ -21,10 +21,15 @@ export default async function CustomerHomePage() {
   const profile = await getCustomerProfileByUserId(session!.user.id);
   if (!profile) return null;
 
-  const tiers = await listActiveTiersCached();
+  // Independent reads — parallelized so the page waits on the slowest one,
+  // not the sum of all three.
+  const [tiers, rewards, rawMissions] = await Promise.all([
+    listActiveTiersCached(),
+    listRewardsForCustomer(profile.id),
+    getMissionsForCustomer(profile.id),
+  ]);
   const progress = calculateTierProgress(profile.lifetimePoints, tiers);
-  const rewards = await listRewardsForCustomer(profile.id);
-  const missions = filterVisibleMissions(await getMissionsForCustomer(profile.id));
+  const missions = filterVisibleMissions(rawMissions);
 
   const nextBenefit =
     rewards.find((r) => !r.eligible && r.reason === "INSUFFICIENT_POINTS") ??
