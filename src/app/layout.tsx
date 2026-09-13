@@ -1,21 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Fraunces, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthSessionProvider } from "@/components/shared/session-provider";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Body copy, headings, card titles — IBM Plex Sans, the typeface Reddit's
+// web UI is set in. Used everywhere except the "Ciocolatto" wordmark below.
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
-});
-
-// Headings, card titles, body emphasis — modern and highly legible.
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700"],
 });
 
 // Reserved for the "Ciocolatto" wordmark only (via the `font-logo` utility) —
@@ -69,7 +65,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
-      className={`${geistSans.variable} ${jakarta.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <AuthSessionProvider>

@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-jakarta);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --font-heading: var(--font-plex-sans);
   /* Reserved for the "Ciocolatto" wordmark only — see `font-logo` usages. */
   --font-logo: var(--font-fraunces);
   /* Ciocolatto brand — fixed values usable regardless of light/dark theme,
