@@ -31,10 +31,16 @@ export async function GET(request: Request) {
     ...(tierSlug && tierSlug !== "all" ? { tier: { slug: tierSlug } } : {}),
   };
 
+  // Hard ceiling so this can never load an unbounded result set into a single
+  // serverless invocation's memory — far above any realistic near-term
+  // customer count, just a safety rail rather than a real-world limit.
+  const EXPORT_ROW_LIMIT = 50_000;
+
   const customers = await prisma.customerProfile.findMany({
     where,
     include: { user: true, tier: true },
     orderBy: { createdAt: "desc" },
+    take: EXPORT_ROW_LIMIT,
   });
 
   const header = [

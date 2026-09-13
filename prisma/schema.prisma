@@ -177,6 +177,7 @@ model CustomerProfile {
 
   @@index([tierId])
   @@index([lastOrderAt])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -226,6 +227,9 @@ model PointTransaction {
 
   @@index([customerProfileId, createdAt])
   @@index([referenceType, referenceId])
+  // Standalone (not customerProfileId-led) — serves the admin dashboard's
+  // store-wide activity series, which filters by createdAt alone.
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -324,6 +328,7 @@ model RewardRedemption {
 
   @@index([customerProfileId, status])
   @@index([status, expiresAt])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────────────────
