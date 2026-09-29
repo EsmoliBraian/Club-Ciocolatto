@@ -11,6 +11,7 @@ import {
   resetPassword,
   PasswordResetError,
 } from "@/server/services/password-reset-service";
+import { checkRegisterLimit, checkLoginLimit, checkPasswordResetLimit, getClientIp, RATE_LIMIT_MESSAGE } from "@/lib/rate-limit";
 
 export interface ActionState {
   error?: string;
@@ -24,6 +25,11 @@ function roleHomePath(role: string): string {
 }
 
 export async function loginAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const ip = await getClientIp();
+  if (!(await checkLoginLimit(ip))) {
+    return { error: RATE_LIMIT_MESSAGE };
+  }
+
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const callbackUrl = formData.get("callbackUrl");
@@ -73,6 +79,11 @@ export async function registerAction(
   _prev: RegisterActionState,
   formData: FormData
 ): Promise<RegisterActionState> {
+  const ip = await getClientIp();
+  if (!(await checkRegisterLimit(ip))) {
+    return { error: RATE_LIMIT_MESSAGE };
+  }
+
   const referralCode = String(formData.get("referralCode") ?? "").trim();
   const acceptedTerms = formData.get("acceptedTerms") === "on";
   const acceptedMarketing = formData.get("acceptedMarketing") === "on";
@@ -156,6 +167,12 @@ export async function requestPasswordResetAction(
   const parsed = requestPasswordResetSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) {
     return { error: "Ingresá un email válido.", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  // Keyed by the target email, not the requester's IP — this is what stops
+  // one account's inbox from being email-bombed by repeated reset requests.
+  if (!(await checkPasswordResetLimit(parsed.data.email))) {
+    return { error: RATE_LIMIT_MESSAGE };
   }
 
   await requestPasswordReset(parsed.data.email);

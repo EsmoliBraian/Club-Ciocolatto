@@ -14,6 +14,13 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("next-auth", () => ({
   AuthError: class AuthError extends Error {},
 }));
+// registerAction/loginAction read the client IP via next/headers' headers(),
+// which requires a real Next.js request scope — unavailable when calling
+// the action directly in a test. A fixed fake IP is fine here: rate limiting
+// itself fails open anyway when Upstash isn't configured (see rate-limit.test.ts).
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers({ "x-forwarded-for": "127.0.0.1" }),
+}));
 
 const { registerAction } = await import("@/actions/auth-actions");
 
