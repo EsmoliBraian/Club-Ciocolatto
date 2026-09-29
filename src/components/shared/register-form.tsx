@@ -4,8 +4,10 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { registerAction, type RegisterActionState } from "@/actions/auth-actions";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ThemeChoiceCards } from "@/components/shared/theme-choice-cards";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SubmitButton } from "@/components/shared/submit-button";
 import { TermsDialog } from "@/components/shared/terms-dialog";
@@ -120,10 +122,9 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Contraseña</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           autoComplete="new-password"
           aria-invalid={!!errors.password}
@@ -152,6 +153,12 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
           aria-invalid={!!errors.referralCode}
         />
         {errors.referralCode && <p className="text-xs text-destructive">{errors.referralCode[0]}</p>}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Elegí el estilo de la app</Label>
+        <ThemeChoiceCards />
+        <p className="text-xs text-muted-foreground">Lo podés cambiar cuando quieras desde tu perfil.</p>
       </div>
 
       <div className="flex flex-col gap-2.5 pt-1">

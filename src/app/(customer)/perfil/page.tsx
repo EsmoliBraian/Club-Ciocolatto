@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, UserCog, Receipt, Star, Gift as GiftIcon, Users, Sparkles, Activity } from "lucide-react";
+import { ChevronRight, UserCog, Receipt, Star, Gift as GiftIcon, Users, Sparkles, Activity, Palette } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
@@ -11,6 +11,7 @@ export const metadata: Metadata = { title: "Perfil" };
 
 const MENU = [
   { href: "/perfil/datos", label: "Mis datos", icon: UserCog },
+  { href: "/perfil/apariencia", label: "Apariencia", icon: Palette },
   { href: "/promociones", label: "Promociones", icon: Sparkles },
   { href: "/actividad", label: "Actividad", icon: Activity },
   { href: "/perfil/compras", label: "Historial de puntos recibidos", icon: Receipt },

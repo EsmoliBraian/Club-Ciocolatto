@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { resetPasswordAction, type ResetPasswordState } from "@/actions/auth-actions";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/submit-button";
 
@@ -42,7 +42,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="password">Nueva contraseña</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" required />
+        <PasswordInput id="password" name="password" autoComplete="new-password" required />
         {errors.password ? (
           <ul className="list-disc pl-4 text-xs text-destructive">
             {errors.password.map((msg) => (

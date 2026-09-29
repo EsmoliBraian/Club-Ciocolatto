@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { loginAction, type ActionState } from "@/actions/auth-actions";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/shared/password-input";
 import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/shared/submit-button";
 
@@ -41,7 +42,7 @@ export function LoginForm({ callbackUrl, registered }: { callbackUrl?: string; r
             ¿Olvidaste tu contraseña?
           </Link>
         </div>
-        <Input id="password" name="password" type="password" autoComplete="current-password" required />
+        <PasswordInput id="password" name="password" autoComplete="current-password" required />
       </div>
 
       <SubmitButton className="mt-2 h-10 w-full" pendingText="Ingresando…">

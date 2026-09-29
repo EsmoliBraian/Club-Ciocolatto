@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthSessionProvider } from "@/components/shared/session-provider";
 import { ServiceWorkerRegistration } from "@/components/shared/service-worker-registration";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 import "./globals.css";
 
 // Body copy, headings, card titles — IBM Plex Sans, the typeface Reddit's
@@ -65,16 +66,19 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${plexSans.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <AuthSessionProvider>
-          <TooltipProvider delay={150}>
-            {children}
-            <Toaster richColors position="top-center" />
-            <ServiceWorkerRegistration />
-          </TooltipProvider>
-        </AuthSessionProvider>
+        <ThemeProvider>
+          <AuthSessionProvider>
+            <TooltipProvider delay={150}>
+              {children}
+              <Toaster richColors position="top-center" />
+              <ServiceWorkerRegistration />
+            </TooltipProvider>
+          </AuthSessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

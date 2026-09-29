@@ -116,6 +116,45 @@
   --sidebar-ring: var(--cc-green-600);
 }
 
+.dark {
+  /* Dark theme — same brand tokens (--cc-*) as light mode, semantic tokens
+     re-pointed. Primary/ring lean gold instead of green here (matching the
+     dark "VIP" welcome screen's own gold-on-dark-green look), since a green
+     button reads poorly on a dark surface — this makes the whole app's dark
+     mode feel like an extension of that screen rather than a separate one. */
+  --background: #151d17;
+  --foreground: var(--cc-cream-200);
+  --card: #1c2620;
+  --card-foreground: var(--cc-cream-200);
+  --popover: #1c2620;
+  --popover-foreground: var(--cc-cream-200);
+  --primary: var(--cc-gold-400);
+  --primary-foreground: var(--cc-green-900);
+  --secondary: #233129;
+  --secondary-foreground: var(--cc-gold-300);
+  --muted: #1f2a22;
+  --muted-foreground: #a3ab9f;
+  --accent: var(--cc-green-600);
+  --accent-foreground: var(--cc-cream-50);
+  --destructive: #e0846a;
+  --border: #2c3a30;
+  --input: #2c3a30;
+  --ring: var(--cc-gold-400);
+  --chart-1: var(--cc-gold-400);
+  --chart-2: var(--cc-green-soft);
+  --chart-3: var(--cc-green-600);
+  --chart-4: #2c3a30;
+  --chart-5: var(--cc-gold-300);
+  --sidebar: #1c2620;
+  --sidebar-foreground: var(--cc-cream-200);
+  --sidebar-primary: var(--cc-gold-400);
+  --sidebar-primary-foreground: var(--cc-green-900);
+  --sidebar-accent: #233129;
+  --sidebar-accent-foreground: var(--cc-gold-300);
+  --sidebar-border: #2c3a30;
+  --sidebar-ring: var(--cc-gold-400);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
