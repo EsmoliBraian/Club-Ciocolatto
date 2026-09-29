@@ -27,11 +27,18 @@ async function withinLimit(limiter: Ratelimit | null, identifier: string): Promi
 // credential stuffing from one source). Password reset is keyed by the
 // *target* email instead (protects one account from being email-bombed by
 // repeated reset requests, regardless of which IP sends them).
+//
+// The register/login limits are deliberately generous, not tight — several
+// real customers on the same mobile carrier commonly share one public IP
+// via CGNAT (very common in Argentina), especially during a promo push
+// (e.g. an Instagram Story) that brings a burst of different people
+// registering from the same cell tower within the same hour. A tight limit
+// would block real signups, not bots; this still catches an actual script.
 const registerLimiter = redis
-  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(5, "1 h"), prefix: "rl:register", analytics: true })
+  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "1 h"), prefix: "rl:register", analytics: true })
   : null;
 const loginLimiter = redis
-  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(15, "15 m"), prefix: "rl:login", analytics: true })
+  ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(30, "15 m"), prefix: "rl:login", analytics: true })
   : null;
 const passwordResetLimiter = redis
   ? new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(3, "1 h"), prefix: "rl:pwreset", analytics: true })
