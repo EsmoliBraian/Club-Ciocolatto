@@ -6,6 +6,7 @@ import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
 import { AvatarUpload } from "@/components/customer/avatar-upload";
 import { TierBadgeButton } from "@/components/customer/tier-badge-button";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Perfil" };
 
@@ -39,8 +40,9 @@ export default async function ProfilePage() {
             {profile.user.firstName} {profile.user.lastName}
           </p>
           <p className="truncate text-sm text-muted-foreground">{profile.user.email}</p>
-          <p className="mt-0.5 text-xs font-medium text-primary">
-            {profile.tier?.icon} {profile.tier?.name ?? "Amigo Ciocolatto"}
+          <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary">
+            <BrandIcon emoji={profile.tier?.icon} size={14} />
+            {profile.tier?.name ?? "Amigo Ciocolatto"}
           </p>
         </div>
         <TierBadgeButton icon={profile.tier?.icon ?? null} name={profile.tier?.name ?? "Amigo Ciocolatto"} color={profile.tier?.color ?? null} />

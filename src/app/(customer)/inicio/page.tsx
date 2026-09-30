@@ -11,6 +11,8 @@ import { listActiveTiersCached, calculateTierProgress } from "@/server/services/
 import { listRewardsForCustomer } from "@/server/services/reward-service";
 import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
 import { getSurveyStateForCustomer } from "@/server/services/survey-service";
+import { countUnreadNotifications } from "@/server/services/notification-service";
+import { NotificationsButton } from "@/components/customer/notifications-button";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
@@ -30,11 +32,12 @@ export default async function CustomerHomePage() {
 
   // Independent reads — parallelized so the page waits on the slowest one,
   // not the sum of all three.
-  const [tiers, rewards, rawMissions, surveyState] = await Promise.all([
+  const [tiers, rewards, rawMissions, surveyState, unreadCount] = await Promise.all([
     listActiveTiersCached(),
     listRewardsForCustomer(profile.id),
     getMissionsForCustomer(profile.id),
     getSurveyStateForCustomer(profile.id),
+    countUnreadNotifications(session!.user.id),
   ]);
   const progress = calculateTierProgress(profile.lifetimePoints, tiers);
   const missions = filterVisibleMissions(rawMissions);
@@ -70,6 +73,7 @@ export default async function CustomerHomePage() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <NotificationsButton unreadCount={unreadCount} />
           <Link href="/perfil">
             <Avatar className="size-10">
               {profile.user.avatarUrl && <AvatarImage src={profile.user.avatarUrl} alt="" />}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { TierProgress } from "@/server/services/tier-service";
 import { CircularProgress } from "@/components/customer/circular-progress";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export function TierProgressCard({
   pointsBalance,
@@ -13,8 +14,9 @@ export function TierProgressCard({
 
   return (
     <div className="flex flex-col items-center gap-3 rounded-3xl bg-gradient-to-br from-cc-green-700 to-cc-green-900 px-6 py-7 text-center shadow-[0_16px_32px_-12px_rgba(20,42,28,0.45)]">
-      <p className="text-xs font-semibold tracking-wide text-cc-gold-300 uppercase">
-        {currentTier?.icon} {currentTier?.name ?? "Amigo Ciocolatto"}
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-cc-gold-300 uppercase">
+        <BrandIcon emoji={currentTier?.icon} size={16} color="#e2c98d" />
+        {currentTier?.name ?? "Amigo Ciocolatto"}
       </p>
 
       <CircularProgress value={progressPct}>

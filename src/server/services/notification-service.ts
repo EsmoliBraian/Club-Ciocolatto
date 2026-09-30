@@ -9,6 +9,7 @@ import {
   pointsExpiringEmailHtml,
   genericEmailHtml,
 } from "@/lib/email";
+import { pushToUser } from "@/server/services/push-service";
 
 export interface NotifyInput {
   userId: string;
@@ -70,6 +71,14 @@ export async function notify(input: NotifyInput, db: Db = prisma) {
     });
   }
 
+  // Push is a cross-cutting add-on, independent of `channel` — a customer who
+  // opted in gets a push for every notification type, on top of whichever
+  // primary channel (email or none) already fired above. Fire-and-forget,
+  // same reasoning as the dispatcher above.
+  void pushToUser(input.userId, { title: input.title, body: input.body, url: "/actividad" }, db).catch((err) => {
+    console.error("[notification-service] push fan-out failed", err);
+  });
+
   return notification;
 }
 
@@ -79,4 +88,12 @@ export async function listRecentNotifications(userId: string, limit = 50, db: Db
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+export async function countUnreadNotifications(userId: string, db: Db = prisma): Promise<number> {
+  return db.notification.count({ where: { userId, read: false } });
+}
+
+export async function markAllNotificationsRead(userId: string, db: Db = prisma): Promise<void> {
+  await db.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
 }

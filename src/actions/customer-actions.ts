@@ -13,8 +13,10 @@ import {
 import { redeemReward as redeemRewardService, RewardRedemptionError } from "@/server/services/reward-service";
 import { submitPointClaim, PointClaimError } from "@/server/services/point-claim-service";
 import { submitSurveyResponse, SurveyError } from "@/server/services/survey-service";
+import { subscribeToPush, unsubscribeFromPush } from "@/server/services/push-service";
 import { updateProfileSchema } from "@/schemas/auth";
 import type { PointClaimType } from "@prisma/client";
+import type { PushSubscriptionInput } from "@/lib/push";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -187,4 +189,16 @@ export async function redeemRewardAction(rewardId: string) {
     if (error instanceof RewardRedemptionError) return { success: false as const, error: error.message };
     throw error;
   }
+}
+
+export async function subscribeToPushAction(subscription: PushSubscriptionInput) {
+  const { user } = await requireCustomerProfile();
+  await subscribeToPush(user.id, subscription);
+  return { success: true as const };
+}
+
+export async function unsubscribeFromPushAction(endpoint: string) {
+  await requireCustomerProfile();
+  await unsubscribeFromPush(endpoint);
+  return { success: true as const };
 }

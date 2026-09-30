@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Coins, Gift, TrendingUp, Trophy, Cake, Users, Bell } from "lucide-react";
+import { Coins, Gift, TrendingUp, Trophy, Cake, Users, Bell, PartyPopper, HeartHandshake, Hourglass } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { listRecentNotifications } from "@/server/services/notification-service";
+import { listRecentNotifications, markAllNotificationsRead } from "@/server/services/notification-service";
 import { groupByDay } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
+import { PushNotificationsToggle } from "@/components/customer/push-notifications-toggle";
 
 export const metadata: Metadata = { title: "Actividad" };
 
@@ -14,7 +15,10 @@ const TYPE_META: Record<string, { icon: typeof Bell; style: string }> = {
   MISSION_COMPLETED: { icon: Trophy, style: "bg-amber-100 text-amber-600" },
   REWARD_UNLOCKED: { icon: Gift, style: "bg-rose-100 text-rose-600" },
   BIRTHDAY: { icon: Cake, style: "bg-pink-100 text-pink-600" },
+  ANNIVERSARY: { icon: PartyPopper, style: "bg-fuchsia-100 text-fuchsia-600" },
   REFERRAL_COMPLETED: { icon: Users, style: "bg-violet-100 text-violet-600" },
+  WINBACK: { icon: HeartHandshake, style: "bg-cyan-100 text-cyan-600" },
+  POINTS_EXPIRING: { icon: Hourglass, style: "bg-red-100 text-red-600" },
   GENERAL: { icon: Bell, style: "bg-secondary text-primary" },
 };
 
@@ -22,6 +26,7 @@ export default async function ActivityPage() {
   const session = await auth();
   const notifications = await listRecentNotifications(session!.user.id);
   const groups = groupByDay(notifications, (n) => n.createdAt);
+  await markAllNotificationsRead(session!.user.id);
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-5 px-4 pt-6">
@@ -29,6 +34,8 @@ export default async function ActivityPage() {
         <h1 className="font-heading text-xl font-semibold text-foreground">Actividad</h1>
         <p className="text-sm text-muted-foreground">Todo lo que pasó en tu cuenta del Club.</p>
       </div>
+
+      <PushNotificationsToggle />
 
       {groups.length === 0 ? (
         <Card>

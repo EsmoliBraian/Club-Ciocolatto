@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TierFormDialog } from "@/components/admin/tier-form-dialog";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Niveles" };
 
@@ -24,7 +25,7 @@ export default async function TiersAdminPage() {
           <Card key={tier.id}>
             <CardContent className="flex items-center justify-between gap-4 py-4">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{tier.icon}</span>
+                <BrandIcon emoji={tier.icon} size={28} color={tier.color ?? undefined} />
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-heading font-semibold">{tier.name}</p>

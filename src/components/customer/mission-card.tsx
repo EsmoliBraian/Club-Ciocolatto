@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 const ICON_STYLES = [
   "bg-orange-100 text-orange-600",
@@ -38,7 +39,7 @@ export function MissionCard({
           ICON_STYLES[colorIndex % ICON_STYLES.length]
         )}
       >
-        {icon ?? "🎯"}
+        <BrandIcon emoji={icon ?? "🎯"} size={22} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">

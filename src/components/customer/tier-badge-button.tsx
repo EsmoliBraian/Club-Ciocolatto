@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 const SIZE_CLASSES = {
-  default: "size-14 text-2xl",
-  sm: "size-9 text-base",
+  default: "size-14",
+  sm: "size-9",
 };
+
+const ICON_PX = { default: 28, sm: 18 };
 
 export function TierBadgeButton({
   icon,
@@ -25,7 +28,7 @@ export function TierBadgeButton({
       className={`flex shrink-0 items-center justify-center rounded-full border-2 transition-transform active:scale-95 ${SIZE_CLASSES[size]}`}
       style={{ borderColor: tint, backgroundColor: `${tint}1a` }}
     >
-      <span>{icon ?? "🏅"}</span>
+      <BrandIcon emoji={icon ?? "🏅"} size={ICON_PX[size]} color={tint} />
     </Link>
   );
 }

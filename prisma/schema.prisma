@@ -165,6 +165,7 @@ model User {
   redeemedByEntries   RewardRedemption[]   @relation("RedeemedByEmployee")
   passwordResetTokens PasswordResetToken[]
   reviewedPointClaims PointClaim[]         @relation("PointClaimReviewer")
+  pushSubscriptions   PushSubscription[]
 
   @@index([role])
 }
@@ -489,6 +490,21 @@ model Notification {
   createdAt DateTime            @default(now())
 
   @@index([userId, read, createdAt])
+}
+
+// One row per browser/device the customer opted into Web Push on. A user can
+// have several (phone + laptop, etc.); a 410/404 response from the push
+// service on send means the subscription expired and the row gets deleted.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model AuditLog {

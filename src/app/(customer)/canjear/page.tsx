@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { listRewardsForCustomer, type RewardEligibility } from "@/server/services/reward-service";
 import { formatDate } from "@/lib/format";
+import { BrandIcon } from "@/components/shared/brand-icon";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RedeemButton } from "@/components/customer/redeem-button";
@@ -73,7 +74,7 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
           key={reward.id}
           className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
         >
-          <span className="text-2xl">{reward.icon ?? "🎁"}</span>
+          <BrandIcon emoji={reward.icon ?? "🎁"} size={28} className="text-foreground" />
           <div className="min-h-8">
             <p className="font-medium leading-tight text-foreground">{reward.name}</p>
             {reward.category === "PRODUCT" && (

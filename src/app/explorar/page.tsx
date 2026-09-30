@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowLeft, Gift, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandIcon } from "@/components/shared/brand-icon";
 import { listActiveTiersCached } from "@/server/services/tier-service";
 import { listActiveRewards } from "@/server/services/reward-service";
 
@@ -31,7 +32,7 @@ export default async function ExplorePage() {
           </p>
           {tiers.map((tier) => (
             <div key={tier.id} className="flex items-start gap-3 rounded-2xl bg-cc-cream-50 p-4">
-              <span className="text-2xl">{tier.icon}</span>
+              <BrandIcon emoji={tier.icon} size={32} color={tier.color ?? undefined} />
               <div>
                 <p className="font-heading font-semibold text-cc-green-900">{tier.name}</p>
                 <p className="text-xs text-muted-foreground">
@@ -59,7 +60,7 @@ export default async function ExplorePage() {
           <div className="grid grid-cols-2 gap-3">
             {rewards.slice(0, 6).map((reward) => (
               <div key={reward.id} className="flex flex-col items-center gap-1 rounded-2xl bg-cc-cream-50 p-4 text-center">
-                <span className="text-2xl">{reward.icon ?? "🎁"}</span>
+                <BrandIcon emoji={reward.icon ?? "🎁"} size={32} color="#1c4328" />
                 <p className="text-sm font-medium text-cc-green-900">{reward.name}</p>
                 <p className="text-xs font-semibold text-cc-gold-400">{reward.pointsCost} pts</p>
               </div>

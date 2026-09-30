@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { MissionFormDialog } from "@/components/admin/mission-form-dialog";
 import { ActiveToggle } from "@/components/admin/active-toggle";
 import { toggleMissionActiveAction } from "@/actions/admin-actions";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Misiones" };
 
@@ -26,7 +27,7 @@ export default async function MissionsAdminPage() {
           <Card key={mission.id}>
             <CardContent className="flex items-center justify-between gap-4 py-4">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{mission.icon ?? "🎯"}</span>
+                <BrandIcon emoji={mission.icon ?? "🎯"} size={28} className="text-foreground" />
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="font-heading font-semibold">{mission.name}</p>

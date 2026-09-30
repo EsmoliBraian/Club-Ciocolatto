@@ -48,3 +48,35 @@ self.addEventListener("fetch", (event) => {
     );
   }
 });
+
+self.addEventListener("push", (event) => {
+  let payload = { title: "Club Ciocolatto", body: "Tenés novedades.", url: "/actividad" };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // Malformed/empty payload — fall back to the generic message above.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: payload.url || "/actividad" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/actividad";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(url) && "focus" in client) return client.focus();
+      }
+      return self.clients.openWindow(url);
+    })
+  );
+});

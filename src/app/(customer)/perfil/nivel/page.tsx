@@ -5,6 +5,7 @@ import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { listActiveTiersCached, calculateTierProgress } from "@/server/services/tier-service";
 import { BackHeader } from "@/components/shared/back-header";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Mi camino" };
 
@@ -59,7 +60,7 @@ export default async function TierPathPage() {
                     opacity: isAchieved ? 1 : 0.55,
                   }}
                 >
-                  {tier.icon ?? "🏅"}
+                  <BrandIcon emoji={tier.icon ?? "🏅"} size={28} color={tint} />
                 </span>
               )}
 
