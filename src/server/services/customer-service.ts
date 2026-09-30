@@ -83,7 +83,7 @@ export async function registerCustomer(input: RegisterInput) {
         lastName: input.lastName,
         birthDate: input.birthDate,
         favoriteDrink: input.favoriteDrink,
-        acceptedTermsAt: new Date(),
+        acceptedTermsAt: input.acceptedTerms ? new Date() : null,
         acceptedMarketingAt: input.acceptedMarketing ? new Date() : null,
       },
     });

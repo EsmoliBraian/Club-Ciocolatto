@@ -69,9 +69,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${lobster.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${lobster.variable} h-dvh antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-dvh flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <AuthSessionProvider>
             <TooltipProvider delay={150}>

@@ -27,9 +27,11 @@ export const registerSchema = z.object({
   password: passwordSchema,
   birthDate: z.coerce.date().max(new Date(), "Fecha inválida"),
   favoriteDrink: z.enum(FAVORITE_DRINK_OPTIONS, { error: "Elegí tu bebida favorita" }),
-  acceptedTerms: z.literal(true, {
-    error: "Debés aceptar los términos y condiciones",
-  }),
+  // Not enforced as required — the checkbox is informational, not a signup
+  // blocker (owner's explicit call: forcing it just confuses people who
+  // check it but hit a validation error anyway due to a checkbox/native
+  // form sync quirk).
+  acceptedTerms: z.boolean().default(false),
   acceptedMarketing: z.boolean().default(false),
   referralCode: z.string().trim().toUpperCase().optional().or(z.literal("")),
 });
