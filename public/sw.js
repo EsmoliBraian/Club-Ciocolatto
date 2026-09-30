@@ -1,5 +1,10 @@
-const CACHE_NAME = "club-ciocolatto-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
+// Bump this on any change that should force every installed client to purge
+// its old cache — the browser only re-checks this file for byte changes, so
+// without a version bump a stale cache can persist indefinitely on a device
+// (this exact bug: someone re-adding the home-screen icon kept seeing an old
+// build because nothing ever told the old cache to clear).
+const CACHE_NAME = "club-ciocolatto-v2";
+const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -17,8 +22,12 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Network-first for navigations (so points/balances never show stale), falling
-// back to the cached shell when offline. Cache-first for static assets.
+// Navigations (the actual pages) are ALWAYS fetched fresh from the network —
+// never cached, never served stale. This app shows live points/balances, so
+// an offline-cached page would be actively misleading, not just outdated.
+// Only content-hashed static assets (Next's own /_next/* build output) are
+// cached — safe to cache-first forever, since the same hashed URL is
+// guaranteed to always be the same bytes.
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
@@ -26,13 +35,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
-
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(request).then((res) => res || caches.match("/")))
-    );
-    return;
-  }
+  if (request.mode === "navigate") return;
 
   if (["style", "script", "image", "font"].includes(request.destination)) {
     event.respondWith(
