@@ -8,16 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import { ScanCustomerButton } from "@/components/admin/scan-customer";
 import { CreateCustomerDialog } from "@/components/admin/create-customer-dialog";
+import { TierFilterSelect } from "@/components/admin/tier-filter-select";
 import { StatTile } from "@/components/admin/stat-tile";
 import { Users, UserCheck, UserPlus } from "lucide-react";
 
@@ -95,21 +89,7 @@ export default async function CustomersAdminPage({
 
       <form className="flex flex-wrap items-center gap-2" action="/admin/clientes">
         <Input name="q" defaultValue={q} placeholder="Buscar cliente..." className="max-w-xs" />
-        <Select name="tier" defaultValue={tierSlug ?? "all"}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Nivel">
-              {(value: string) => (value === "all" ? "Todos" : tiers.find((t) => t.slug === value)?.name ?? value)}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {tiers.map((t) => (
-              <SelectItem key={t.id} value={t.slug}>
-                {t.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <TierFilterSelect tiers={tiers} defaultValue={tierSlug ?? "all"} />
         <Button type="submit" variant="secondary">
           Buscar
         </Button>

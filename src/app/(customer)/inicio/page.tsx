@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Coffee } from "lucide-react";
+import { Coffee, Megaphone, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   getCustomerProfileByUserId,
@@ -89,6 +89,20 @@ export default async function CustomerHomePage() {
       {showAnniversary && <AnniversaryBanner />}
 
       <TierProgressCard pointsBalance={profile.pointsBalance} progress={progress} />
+
+      <Link
+        href="/perfil/acciones"
+        className="flex items-center gap-3 rounded-2xl border border-cc-gold-400/40 bg-cc-gold-400/10 p-4 shadow-sm transition-colors hover:bg-cc-gold-400/15"
+      >
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-cc-gold-400 text-cc-green-900">
+          <Megaphone className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-heading font-semibold text-foreground">Puntos Extra</p>
+          <p className="text-sm text-muted-foreground">Sumá puntos por una reseña o publicación en redes.</p>
+        </div>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+      </Link>
 
       {surveyState.question && !surveyState.alreadyAnswered && <SurveyCard question={surveyState.question} />}
 
