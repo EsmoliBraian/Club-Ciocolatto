@@ -9,3 +9,13 @@ export async function listActivePromotionsForCustomer(db: Db = prisma) {
     orderBy: { endAt: "asc" },
   });
 }
+
+/** Promotions that haven't started yet — for teasing "coming soon" on the home page. */
+export async function listUpcomingPromotionsForCustomer(db: Db = prisma) {
+  const now = new Date();
+  return db.promotion.findMany({
+    where: { active: true, startAt: { gt: now } },
+    include: { product: true },
+    orderBy: { startAt: "asc" },
+  });
+}

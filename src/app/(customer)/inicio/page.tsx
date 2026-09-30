@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Coffee, Megaphone, ChevronRight } from "lucide-react";
+import { Coffee, Megaphone, Sparkles, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   getCustomerProfileByUserId,
@@ -12,6 +12,7 @@ import { listRewardsForCustomer } from "@/server/services/reward-service";
 import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
 import { getSurveyStateForCustomer } from "@/server/services/survey-service";
 import { countUnreadNotifications } from "@/server/services/notification-service";
+import { listActivePromotionsForCustomer, listUpcomingPromotionsForCustomer } from "@/server/services/promotion-service";
 import { NotificationsButton } from "@/components/customer/notifications-button";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
@@ -32,12 +33,14 @@ export default async function CustomerHomePage() {
 
   // Independent reads — parallelized so the page waits on the slowest one,
   // not the sum of all three.
-  const [tiers, rewards, rawMissions, surveyState, unreadCount] = await Promise.all([
+  const [tiers, rewards, rawMissions, surveyState, unreadCount, activePromos, upcomingPromos] = await Promise.all([
     listActiveTiersCached(),
     listRewardsForCustomer(profile.id),
     getMissionsForCustomer(profile.id),
     getSurveyStateForCustomer(profile.id),
     countUnreadNotifications(session!.user.id),
+    listActivePromotionsForCustomer(),
+    listUpcomingPromotionsForCustomer(),
   ]);
   const progress = calculateTierProgress(profile.lifetimePoints, tiers);
   const missions = filterVisibleMissions(rawMissions);
@@ -60,6 +63,12 @@ export default async function CustomerHomePage() {
     profile.anniversaryRewardClaimedYear !== new Date().getFullYear();
 
   const initials = `${profile.user.firstName[0]}${profile.user.lastName[0] ?? ""}`.toUpperCase();
+
+  // Active takes priority (it's actionable right now); otherwise tease the
+  // soonest upcoming one. Hidden entirely when there's nothing to show —
+  // no empty/irrelevant banner.
+  const featuredPromo = activePromos[0] ?? upcomingPromos[0];
+  const promoIsActive = !!activePromos[0];
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pt-6">
@@ -107,6 +116,24 @@ export default async function CustomerHomePage() {
         </div>
         <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
       </Link>
+
+      {featuredPromo && (
+        <Link
+          href="/promociones"
+          className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-sm transition-colors hover:bg-primary/15"
+        >
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+            <Sparkles className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              {promoIsActive ? "Promoción activa" : "Próximamente"}
+            </p>
+            <p className="truncate font-heading font-semibold text-foreground">{featuredPromo.name}</p>
+          </div>
+          <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
+        </Link>
+      )}
 
       {surveyState.question && !surveyState.alreadyAnswered && <SurveyCard question={surveyState.question} />}
 

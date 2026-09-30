@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Sparkles, Percent, Gift, Coins } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
-import { listActivePromotionsForCustomer } from "@/server/services/promotion-service";
+import {
+  listActivePromotionsForCustomer,
+  listUpcomingPromotionsForCustomer,
+} from "@/server/services/promotion-service";
 
 export const metadata: Metadata = { title: "Promociones" };
 
@@ -21,7 +24,10 @@ const TYPE_META: Record<string, { icon: typeof Sparkles; label: (p: { multiplier
 };
 
 export default async function PromotionsPage() {
-  const promotions = await listActivePromotionsForCustomer();
+  const [promotions, upcoming] = await Promise.all([
+    listActivePromotionsForCustomer(),
+    listUpcomingPromotionsForCustomer(),
+  ]);
   const now = new Date();
 
   return (
@@ -31,7 +37,7 @@ export default async function PromotionsPage() {
         <p className="text-sm text-muted-foreground">Aprovechá los beneficios activos por tiempo limitado.</p>
       </div>
 
-      {promotions.length === 0 ? (
+      {promotions.length === 0 && upcoming.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-2xl border border-border bg-card py-12 text-center">
           <Sparkles className="size-8 text-muted-foreground" />
           <p className="font-medium text-foreground">No hay promociones activas ahora.</p>
@@ -69,6 +75,36 @@ export default async function PromotionsPage() {
                       {daysLeft <= 0 ? "Termina hoy" : daysLeft === 1 ? "Termina mañana" : `${daysLeft} días restantes`}
                     </span>
                   </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="font-heading font-semibold text-foreground">Próximamente</p>
+          {upcoming.map((promo) => {
+            const meta = TYPE_META[promo.type];
+            const Icon = meta?.icon ?? Sparkles;
+            const daysUntil = differenceInCalendarDays(promo.startAt, now);
+            return (
+              <div
+                key={promo.id}
+                className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-4 opacity-80"
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+                  <Icon className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-heading font-semibold text-foreground">{promo.name}</p>
+                  {promo.description && (
+                    <p className="mt-0.5 text-sm text-muted-foreground">{promo.description}</p>
+                  )}
+                  <span className="mt-2 inline-block text-xs font-medium text-muted-foreground">
+                    {daysUntil <= 0 ? "Empieza hoy" : daysUntil === 1 ? "Empieza mañana" : `Empieza en ${daysUntil} días`}
+                  </span>
                 </div>
               </div>
             );
