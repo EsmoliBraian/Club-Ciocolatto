@@ -175,10 +175,11 @@ export async function requestPasswordResetAction(
     return { error: RATE_LIMIT_MESSAGE };
   }
 
-  await requestPasswordReset(parsed.data.email);
+  const found = await requestPasswordReset(parsed.data.email);
+  if (!found) {
+    return { error: "No encontramos una cuenta con ese email. Revisá que esté bien escrito o registrate." };
+  }
 
-  // Always the same "submitted" result, whether or not the email matched an
-  // account — avoids leaking which emails are registered.
   return { submitted: true };
 }
 

@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Club Ciocolatto",
     short_name: "Club Ciocolatto",
-    description: "Más que clientes, fanáticos. El programa de fidelización de Ciocolatto.",
+    description: "Más que clientes, amigos. El programa de fidelización de Ciocolatto.",
     start_url: "/inicio",
     display: "standalone",
     background_color: "#faf3e4",

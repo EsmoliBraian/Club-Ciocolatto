@@ -149,7 +149,7 @@ export function RegisterForm({ referralCode }: { referralCode?: string }) {
           name="referralCode"
           defaultValue={values?.referralCode ?? referralCode}
           className="uppercase"
-          placeholder="Ej: BRAIAN50"
+          placeholder="Ej: PARCHE63"
           aria-invalid={!!errors.referralCode}
         />
         {errors.referralCode && <p className="text-xs text-destructive">{errors.referralCode[0]}</p>}

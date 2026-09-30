@@ -17,8 +17,8 @@ export function ForgotPasswordForm() {
       <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 text-center shadow-sm">
         <h1 className="font-heading text-xl font-semibold">Revisá tu email</h1>
         <p className="text-sm text-muted-foreground">
-          Si existe una cuenta con ese email, te enviamos un link para restablecer tu contraseña. Puede tardar
-          unos minutos en llegar.
+          Te enviamos un link para restablecer tu contraseña. Puede tardar unos minutos en llegar — revisá también
+          spam.
         </p>
         <Link href="/login" className="text-sm font-medium text-primary hover:underline">
           Volver a iniciar sesión

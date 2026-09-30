@@ -11,7 +11,7 @@ function randomFromAlphabet(length: number, alphabet: string): string {
   return out;
 }
 
-/** Human-shareable personal referral code, e.g. "BRAIAN50". */
+/** Human-shareable personal referral code, e.g. "PARCHE63". */
 export function buildReferralCodeCandidate(firstName: string): string {
   const base = firstName
     .normalize("NFD")

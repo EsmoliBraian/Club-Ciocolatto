@@ -16,13 +16,15 @@ function hashToken(rawToken: string): string {
 }
 
 /**
- * Always resolves without revealing whether the email exists (avoids account
- * enumeration) — the caller shows the same message either way. Sends nothing
- * when there's no matching account.
+ * Returns whether a matching, active account was found. The caller shows a
+ * distinct "no account with that email" message when false — deliberately
+ * not anti-enumeration-safe: for this app, a customer stuck on "check your
+ * email" with no way to tell a real delivery problem from a typo'd email is
+ * worse than confirming the email isn't registered.
  */
-export async function requestPasswordReset(email: string): Promise<void> {
+export async function requestPasswordReset(email: string): Promise<boolean> {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
-  if (!user || !user.active) return;
+  if (!user || !user.active) return false;
 
   const rawToken = randomBytes(32).toString("base64url");
   await prisma.passwordResetToken.create({
@@ -41,6 +43,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
     subject: "Restablecé tu contraseña — Club Ciocolatto",
     html: passwordResetEmailHtml({ firstName: user.firstName, resetUrl }),
   });
+
+  return true;
 }
 
 export async function resetPassword(rawToken: string, newPassword: string): Promise<void> {

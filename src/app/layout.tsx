@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: "%s · Club Ciocolatto",
   },
   description:
-    "Más que clientes, fanáticos. Sumá puntos, subí de nivel y desbloqueá beneficios en cada visita a Ciocolatto.",
+    "Más que clientes, amigos. Sumá puntos, subí de nivel y desbloqueá beneficios en cada visita a Ciocolatto.",
   applicationName: "Club Ciocolatto",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Club Ciocolatto",
-    description: "Más que clientes, fanáticos.",
+    description: "Más que clientes, amigos.",
     type: "website",
     locale: "es_AR",
   },
