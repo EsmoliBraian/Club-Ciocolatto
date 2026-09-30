@@ -25,7 +25,15 @@ function useBreadcrumb() {
   return { section: current?.label ?? "Dashboard", isDetail };
 }
 
-export function AdminHeader({ userName, userRole }: { userName: string; userRole: string }) {
+export function AdminHeader({
+  userName,
+  userRole,
+  pendingSolicitudesCount,
+}: {
+  userName: string;
+  userRole: string;
+  pendingSolicitudesCount?: number;
+}) {
   const { section, isDetail } = useBreadcrumb();
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -43,7 +51,7 @@ export function AdminHeader({ userName, userRole }: { userName: string; userRole
 
   return (
     <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
-      <AdminMobileNav userName={userName} userRole={userRole} />
+      <AdminMobileNav userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
 
       <nav className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
         <Link href="/admin" className="hover:text-foreground">

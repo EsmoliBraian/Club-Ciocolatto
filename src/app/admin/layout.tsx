@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { ADMIN_ROLES } from "@/lib/rbac";
 import { AdminSidebar } from "@/components/admin/sidebar";
 import { AdminHeader } from "@/components/admin/header";
+import { countPendingClaims } from "@/server/services/point-claim-service";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const session = await auth();
@@ -13,12 +14,13 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const userName = `${session.user.firstName} ${session.user.lastName}`;
   const userRole = session.user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin";
+  const pendingSolicitudesCount = await countPendingClaims();
 
   return (
     <div className="flex min-h-full flex-1 bg-background">
-      <AdminSidebar userName={userName} userRole={userRole} />
+      <AdminSidebar userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
       <div className="flex flex-1 flex-col">
-        <AdminHeader userName={userName} userRole={userRole} />
+        <AdminHeader userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
         <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>

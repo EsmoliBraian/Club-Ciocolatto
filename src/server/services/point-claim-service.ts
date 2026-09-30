@@ -36,6 +36,10 @@ export async function listClaimsForCustomer(customerProfileId: string, db: Db = 
   });
 }
 
+export async function countPendingClaims(db: Db = prisma) {
+  return db.pointClaim.count({ where: { status: "PENDING" } });
+}
+
 export async function listPendingClaims(db: Db = prisma) {
   return db.pointClaim.findMany({
     where: { status: "PENDING" },

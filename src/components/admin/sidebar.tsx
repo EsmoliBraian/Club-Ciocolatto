@@ -33,13 +33,20 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
 
-export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
+export function AdminNavLinks({
+  onNavigate,
+  pendingSolicitudesCount = 0,
+}: {
+  onNavigate?: () => void;
+  pendingSolicitudesCount?: number;
+}) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-1 flex-col gap-0.5">
       {ADMIN_NAV_ITEMS.map((item) => {
         const active = item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href);
+        const showBadge = item.href === "/admin/solicitudes" && pendingSolicitudesCount > 0;
         return (
           <Link
             key={item.href}
@@ -53,7 +60,12 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
             )}
           >
             <item.icon className="size-4 shrink-0" />
-            {item.label}
+            <span className="flex-1">{item.label}</span>
+            {showBadge && (
+              <span className="flex size-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
+                {pendingSolicitudesCount > 9 ? "9+" : pendingSolicitudesCount}
+              </span>
+            )}
           </Link>
         );
       })}
@@ -89,7 +101,15 @@ function DownloadAppCard() {
   );
 }
 
-export function AdminSidebar({ userName, userRole }: { userName: string; userRole: string }) {
+export function AdminSidebar({
+  userName,
+  userRole,
+  pendingSolicitudesCount,
+}: {
+  userName: string;
+  userRole: string;
+  pendingSolicitudesCount?: number;
+}) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-border bg-card px-3 py-5 md:flex">
       <BrandMark />
@@ -97,7 +117,7 @@ export function AdminSidebar({ userName, userRole }: { userName: string; userRol
         <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
         <p className="text-xs text-muted-foreground">{userRole}</p>
       </div>
-      <AdminNavLinks />
+      <AdminNavLinks pendingSolicitudesCount={pendingSolicitudesCount} />
       <DownloadAppCard />
       <div className="border-t border-border pt-2">
         <LogoutMenuRow variant="light" />

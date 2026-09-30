@@ -8,7 +8,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { AdminNavLinks } from "@/components/admin/sidebar";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
 
-export function AdminMobileNav({ userName, userRole }: { userName: string; userRole: string }) {
+export function AdminMobileNav({
+  userName,
+  userRole,
+  pendingSolicitudesCount,
+}: {
+  userName: string;
+  userRole: string;
+  pendingSolicitudesCount?: number;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -38,7 +46,7 @@ export function AdminMobileNav({ userName, userRole }: { userName: string; userR
           <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
           <p className="text-xs text-muted-foreground">{userRole}</p>
         </div>
-        <AdminNavLinks onNavigate={() => setOpen(false)} />
+        <AdminNavLinks onNavigate={() => setOpen(false)} pendingSolicitudesCount={pendingSolicitudesCount} />
         <div className="border-t border-border pt-2">
           <LogoutMenuRow variant="light" />
         </div>
