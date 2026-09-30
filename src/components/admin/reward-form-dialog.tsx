@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field } from "@/components/admin/form-field";
+import { IconPicker } from "@/components/admin/icon-picker";
 import type { LoyaltyTier, Reward } from "@prisma/client";
 
 const initialState: ActionState = {};
@@ -52,10 +53,8 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
         </DialogHeader>
         <form action={submit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
           {reward && <input type="hidden" name="id" value={reward.id} />}
-          <div className="grid grid-cols-[1fr_5rem] gap-3">
-            <Field label="Nombre" name="name" defaultValue={reward?.name} required />
-            <Field label="Ícono" name="icon" defaultValue={reward?.icon ?? undefined} placeholder="☕" />
-          </div>
+          <Field label="Nombre" name="name" defaultValue={reward?.name} required />
+          <IconPicker name="icon" defaultValue={reward?.icon} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" name="description" defaultValue={reward?.description ?? undefined} rows={2} />

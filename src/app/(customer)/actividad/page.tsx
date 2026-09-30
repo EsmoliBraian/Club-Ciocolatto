@@ -6,7 +6,7 @@ import { groupByDay } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { PushNotificationsToggle } from "@/components/customer/push-notifications-toggle";
 
-export const metadata: Metadata = { title: "Actividad" };
+export const metadata: Metadata = { title: "Notificaciones" };
 
 const TYPE_META: Record<string, { icon: typeof Bell; style: string }> = {
   POINTS_EARNED: { icon: Coins, style: "bg-emerald-100 text-emerald-600" },

@@ -14,26 +14,31 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
-// Keeps the DB/admin-facing data model as a plain emoji string (admins still
-// type "☕" into a text field, same as before) while upgrading the *render*
-// to a Phosphor duotone illustration that actually matches the app's brand
-// colors. Anything not in this map (a custom emoji an admin picks later)
+// Keeps the DB/admin-facing data model as a plain emoji string — the admin
+// picks one of these from a visual grid (IconPicker) instead of typing an
+// emoji, but the value stored and passed to BrandIcon is still just this
+// same character, so nothing downstream (rendering, DB column) needed to
+// change. Anything NOT in this list (e.g. a row seeded before this existed)
 // falls back to rendering the raw emoji — never a broken icon.
-const EMOJI_ICON_MAP: Record<string, PhosphorIcon> = {
-  "☕": Coffee,
-  "🥐": Cookie,
-  "🍰": Cake,
-  "🏆": Trophy,
-  "👑": Crown,
-  "💰": Tag,
-  "🎁": Gift,
-  "🎂": Cake,
-  "🎉": Sparkle,
-  "💌": Heart,
-  "🤝": Handshake,
-  "🎯": Target,
-  "🏅": Medal,
-};
+export const BRAND_ICON_OPTIONS: { emoji: string; label: string; Icon: PhosphorIcon }[] = [
+  { emoji: "☕", label: "Café", Icon: Coffee },
+  { emoji: "🥐", label: "Bollería", Icon: Cookie },
+  { emoji: "🍰", label: "Torta", Icon: Cake },
+  { emoji: "🏆", label: "Trofeo", Icon: Trophy },
+  { emoji: "👑", label: "Corona", Icon: Crown },
+  { emoji: "💰", label: "Descuento", Icon: Tag },
+  { emoji: "🎁", label: "Regalo", Icon: Gift },
+  { emoji: "🎂", label: "Cumpleaños", Icon: Cake },
+  { emoji: "🎉", label: "Fiesta", Icon: Sparkle },
+  { emoji: "💌", label: "Carta", Icon: Heart },
+  { emoji: "🤝", label: "Referido", Icon: Handshake },
+  { emoji: "🎯", label: "Meta", Icon: Target },
+  { emoji: "🏅", label: "Medalla", Icon: Medal },
+];
+
+const EMOJI_ICON_MAP: Record<string, PhosphorIcon> = Object.fromEntries(
+  BRAND_ICON_OPTIONS.map((o) => [o.emoji, o.Icon])
+);
 
 export function BrandIcon({
   emoji,

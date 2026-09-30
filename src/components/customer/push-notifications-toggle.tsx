@@ -16,28 +16,44 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return array;
 }
 
-type Support = "checking" | "unsupported" | "supported";
+// iOS Safari only exposes the Push API when the site is running as an
+// installed home-screen app (standalone display mode) — in a regular Safari
+// tab `"PushManager" in window` is simply false, even on iOS 16.4+. Detecting
+// *why* it's unavailable lets the UI tell the customer what to do instead of
+// just disappearing with no explanation.
+type Status = "checking" | "needs-install" | "unsupported" | "ready";
+
+function isStandalone(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (navigator as { standalone?: boolean }).standalone === true
+  );
+}
+
+function isIOS(): boolean {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
 
 export function PushNotificationsToggle() {
-  const [support, setSupport] = useState<Support>("checking");
+  const [status, setStatus] = useState<Status>("checking");
   const [enabled, setEnabled] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    const isSupported =
+    const hasPushApi =
       typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
 
     Promise.resolve()
       .then(() => {
-        if (!isSupported) {
-          setSupport("unsupported");
+        if (!hasPushApi) {
+          setStatus(isIOS() && !isStandalone() ? "needs-install" : "unsupported");
           return null;
         }
-        setSupport("supported");
+        setStatus("ready");
         return navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription());
       })
       .then((sub) => setEnabled(!!sub))
-      .catch(() => {});
+      .catch(() => setStatus("unsupported"));
   }, []);
 
   function handleToggle(checked: boolean) {
@@ -82,7 +98,38 @@ export function PushNotificationsToggle() {
     });
   }
 
-  if (support !== "supported") return null;
+  if (status === "checking") return null;
+
+  if (status === "needs-install") {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+          <BellSlash size={20} weight="duotone" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground">Notificaciones push</p>
+          <p className="text-xs text-muted-foreground">
+            Para activarlas, primero agregá Club Ciocolatto a tu pantalla de inicio: tocá Compartir y luego
+            &quot;Agregar a inicio&quot;.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unsupported") {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+          <BellSlash size={20} weight="duotone" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-foreground">Notificaciones push</p>
+          <p className="text-xs text-muted-foreground">Tu navegador no soporta notificaciones push todavía.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">

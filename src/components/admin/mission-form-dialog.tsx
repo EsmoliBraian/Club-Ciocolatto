@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field } from "@/components/admin/form-field";
+import { IconPicker } from "@/components/admin/icon-picker";
 import type { Mission, Product } from "@prisma/client";
 
 const initialState: ActionState = {};
@@ -65,10 +66,8 @@ export function MissionFormDialog({ mission, products }: { mission?: Mission; pr
         </DialogHeader>
         <form action={submit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
           {mission && <input type="hidden" name="id" value={mission.id} />}
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Nombre" name="name" defaultValue={mission?.name} required />
-            <Field label="Ícono" name="icon" defaultValue={mission?.icon ?? undefined} />
-          </div>
+          <Field label="Nombre" name="name" defaultValue={mission?.name} required />
+          <IconPicker name="icon" defaultValue={mission?.icon} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" name="description" defaultValue={mission?.description} required rows={2} />

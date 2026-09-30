@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/admin/form-field";
+import { IconPicker } from "@/components/admin/icon-picker";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -55,11 +56,11 @@ export function TierFormDialog({ tier }: { tier?: LoyaltyTier }) {
             <Field label="Nombre" name="name" defaultValue={tier?.name} required />
             <Field label="Slug" name="slug" defaultValue={tier?.slug} required />
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <Field label="Ícono" name="icon" defaultValue={tier?.icon ?? undefined} />
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Mín. puntos" name="minimumPoints" type="number" defaultValue={tier?.minimumPoints} required />
             <Field label="Máx. puntos" name="maximumPoints" type="number" defaultValue={tier?.maximumPoints ?? undefined} />
           </div>
+          <IconPicker name="icon" defaultValue={tier?.icon} />
           <Field label="Descripción" name="description" defaultValue={tier?.description ?? undefined} />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="benefits">Beneficios (uno por línea)</Label>
