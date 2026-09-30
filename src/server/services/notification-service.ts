@@ -1,7 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { NotificationChannel, NotificationType, Prisma } from "@prisma/client";
-import { sendEmail, birthdayEmailHtml, genericEmailHtml } from "@/lib/email";
+import {
+  sendEmail,
+  birthdayEmailHtml,
+  anniversaryEmailHtml,
+  winbackEmailHtml,
+  pointsExpiringEmailHtml,
+  genericEmailHtml,
+} from "@/lib/email";
 
 export interface NotifyInput {
   userId: string;
@@ -23,14 +30,21 @@ export const channelDispatchers: Partial<
     if (!user) return;
 
     const metadata = (input.metadata ?? {}) as Record<string, unknown>;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://club-ciocolatto.vercel.app";
     const html =
       input.type === "BIRTHDAY"
         ? birthdayEmailHtml({
             firstName: user.firstName,
             drink: typeof metadata.drink === "string" ? metadata.drink : "bebida favorita",
-            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "https://club-ciocolatto.vercel.app",
+            appUrl,
           })
-        : genericEmailHtml(input.title, input.body);
+        : input.type === "ANNIVERSARY"
+          ? anniversaryEmailHtml({ appUrl })
+          : input.type === "WINBACK"
+            ? winbackEmailHtml({ firstName: user.firstName, appUrl })
+            : input.type === "POINTS_EXPIRING"
+              ? pointsExpiringEmailHtml({ firstName: user.firstName, appUrl })
+              : genericEmailHtml(input.title, input.body);
 
     await sendEmail({ to: user.email, subject: input.title, html });
   },

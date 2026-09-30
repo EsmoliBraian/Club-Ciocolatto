@@ -7,7 +7,7 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../src/lib/password";
 import { buildReferralCodeCandidate, generateQrToken } from "../src/lib/codes";
-import { BIRTHDAY_COFFEE_REWARD_ID } from "../src/lib/constants";
+import { BIRTHDAY_COFFEE_REWARD_ID, ANNIVERSARY_GIFT_REWARD_ID, WINBACK_COUPON_REWARD_ID } from "../src/lib/constants";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -116,6 +116,18 @@ async function main() {
     prisma.loyaltyTier.upsert({ where: { slug: leyendaData.slug }, update: leyendaData, create: leyendaData }),
   ]);
 
+  // Milestone-tier defaults for win-back (Fase 7) and the referral duo bonus
+  // (Fase 3) — only backfilled if unset, so an admin's later choice via
+  // /admin/configuracion is never overwritten by a reseed.
+  const existingConfig = await prisma.loyaltyConfig.findUnique({ where: { id: "singleton" } });
+  await prisma.loyaltyConfig.update({
+    where: { id: "singleton" },
+    data: {
+      winbackMinimumTierId: existingConfig?.winbackMinimumTierId ?? fanatico.id,
+      referralDuoMilestoneTierId: existingConfig?.referralDuoMilestoneTierId ?? fan.id,
+    },
+  });
+
   const products = await Promise.all(
     [
       { name: "Café", category: "Bebidas", price: 2500, bonusPoints: 0 },
@@ -152,23 +164,24 @@ async function main() {
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-medialuna" },
-      update: { icon: "🥐" },
+      update: { icon: "🥐", description: "2 medialunas de manteca gratis.", pointsCost: 400 },
       create: {
         id: "seed-reward-medialuna",
         name: "Medialuna",
-        description: "Medialuna de manteca gratis.",
+        description: "2 medialunas de manteca gratis.",
         icon: "🥐",
-        pointsCost: 120,
+        pointsCost: 400,
         active: true,
       },
     }),
     prisma.reward.upsert({
       where: { id: "seed-reward-torta" },
-      update: { icon: "🍰" },
+      update: { icon: "🍰", category: "DISCOUNT", description: "15% OFF en tu porción de torta" },
       create: {
         id: "seed-reward-torta",
         name: "Porción de torta",
-        description: "Elegí tu porción de torta favorita.",
+        description: "15% OFF en tu porción de torta",
+        category: "DISCOUNT",
         icon: "🍰",
         pointsCost: 200,
         active: true,
@@ -213,6 +226,36 @@ async function main() {
         category: "PRODUCT",
         pointsCost: 0,
         hidden: true, // granted automatically by claimBirthdayReward() — never shown in the store
+        perUserLimit: null,
+        active: true,
+      },
+    }),
+    prisma.reward.upsert({
+      where: { id: ANNIVERSARY_GIFT_REWARD_ID },
+      update: { icon: "🎉" },
+      create: {
+        id: ANNIVERSARY_GIFT_REWARD_ID,
+        name: "Postre de aniversario",
+        description: "Un postre a elección, regalo de Ciocolatto por tu aniversario en el Club.",
+        icon: "🎉",
+        category: "PRODUCT",
+        pointsCost: 0,
+        hidden: true, // granted automatically by claimAnniversaryReward() — never shown in the store
+        perUserLimit: null,
+        active: true,
+      },
+    }),
+    prisma.reward.upsert({
+      where: { id: WINBACK_COUPON_REWARD_ID },
+      update: { icon: "💌" },
+      create: {
+        id: WINBACK_COUPON_REWARD_ID,
+        name: "Volvé y ahorrá",
+        description: "10% OFF en tu próxima compra.",
+        icon: "💌",
+        category: "DISCOUNT",
+        pointsCost: 0,
+        hidden: true, // granted automatically by the win-back cron — never shown in the store
         perUserLimit: null,
         active: true,
       },

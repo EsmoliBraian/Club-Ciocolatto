@@ -3,6 +3,7 @@ import { Gift, Star, Lock } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { listRewardsForCustomer, type RewardEligibility } from "@/server/services/reward-service";
+import { formatDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RedeemButton } from "@/components/customer/redeem-button";
@@ -14,6 +15,7 @@ const REASON_LABEL: Record<string, string> = {
   OUT_OF_STOCK: "Agotado",
   TIER_REQUIRED: "Requiere más nivel",
   LIMIT_REACHED: "Límite alcanzado",
+  COOLDOWN_ACTIVE: "Ya lo canjeaste",
 };
 
 export default async function RedeemPage() {
@@ -66,7 +68,7 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {items.map(({ reward, eligible, reason }) => (
+      {items.map(({ reward, eligible, reason, availableAgainAt }) => (
         <div
           key={reward.id}
           className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
@@ -90,7 +92,11 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
           ) : (
             <Button size="sm" variant="outline" disabled className="text-muted-foreground opacity-70">
               <Lock className="size-3" />
-              {reason ? REASON_LABEL[reason] : "No disponible"}
+              {reason === "COOLDOWN_ACTIVE" && availableAgainAt
+                ? `Disponible el ${formatDate(availableAgainAt)}`
+                : reason
+                  ? REASON_LABEL[reason]
+                  : "No disponible"}
             </Button>
           )}
         </div>

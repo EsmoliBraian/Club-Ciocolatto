@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { Reward } from "@prisma/client";
 import { generateRedemptionCode } from "@/lib/codes";
+import { formatDate } from "@/lib/format";
 import { awardPoints } from "@/server/services/loyalty-service";
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
@@ -39,7 +40,8 @@ async function generateUniqueRedemptionCode(db: Db): Promise<string> {
 export interface RewardEligibility {
   reward: Reward;
   eligible: boolean;
-  reason?: "INSUFFICIENT_POINTS" | "OUT_OF_STOCK" | "TIER_REQUIRED" | "LIMIT_REACHED";
+  reason?: "INSUFFICIENT_POINTS" | "OUT_OF_STOCK" | "TIER_REQUIRED" | "LIMIT_REACHED" | "COOLDOWN_ACTIVE";
+  availableAgainAt?: Date;
 }
 
 export async function listRewardsForCustomer(
@@ -51,6 +53,8 @@ export async function listRewardsForCustomer(
   const rewards = await listActiveRewards(db);
   const profile = await db.customerProfile.findUniqueOrThrow({ where: { id: customerProfileId } });
   const tiers = await listActiveTiers(db);
+  const config = await getLoyaltyConfig(db);
+  const now = new Date();
 
   const customerTier = resolveTierForPoints(profile.lifetimePoints, tiers);
   const customerTierRank = customerTier
@@ -61,8 +65,10 @@ export async function listRewardsForCustomer(
     by: ["rewardId"],
     where: { customerProfileId, status: { not: "CANCELLED" } },
     _count: { _all: true },
+    _max: { createdAt: true },
   });
   const countByReward = new Map(redemptionCounts.map((r) => [r.rewardId, r._count._all]));
+  const lastRedeemedByReward = new Map(redemptionCounts.map((r) => [r.rewardId, r._max.createdAt]));
 
   return rewards.map((reward) => {
     if (reward.requiredTierId) {
@@ -79,6 +85,15 @@ export async function listRewardsForCustomer(
       (countByReward.get(reward.id) ?? 0) >= reward.perUserLimit
     ) {
       return { reward, eligible: false, reason: "LIMIT_REACHED" as const };
+    }
+    if (config.rewardCooldownDays != null) {
+      const last = lastRedeemedByReward.get(reward.id);
+      if (last) {
+        const availableAgainAt = new Date(last.getTime() + config.rewardCooldownDays * 86_400_000);
+        if (availableAgainAt > now) {
+          return { reward, eligible: false, reason: "COOLDOWN_ACTIVE" as const, availableAgainAt };
+        }
+      }
     }
     if (profile.pointsBalance < reward.pointsCost) {
       return { reward, eligible: false, reason: "INSUFFICIENT_POINTS" as const };
@@ -135,6 +150,22 @@ export async function redeemReward(
     });
     if (count >= reward.perUserLimit) {
       throw new RewardRedemptionError("LIMIT_REACHED", "Ya alcanzaste el límite de canjes para este beneficio.");
+    }
+  }
+
+  if (config.rewardCooldownDays != null) {
+    const lastRedemption = await db.rewardRedemption.findFirst({
+      where: { customerProfileId: params.customerProfileId, rewardId: reward.id, status: { not: "CANCELLED" } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (lastRedemption) {
+      const availableAgainAt = new Date(lastRedemption.createdAt.getTime() + config.rewardCooldownDays * 86_400_000);
+      if (availableAgainAt > now) {
+        throw new RewardRedemptionError(
+          "COOLDOWN_ACTIVE",
+          `Podés volver a canjear este beneficio a partir del ${formatDate(availableAgainAt)}.`
+        );
+      }
     }
   }
 

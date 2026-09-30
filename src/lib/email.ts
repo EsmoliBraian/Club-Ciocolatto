@@ -93,6 +93,56 @@ export function passwordResetEmailHtml(params: { firstName: string; resetUrl: st
   );
 }
 
+export function anniversaryEmailHtml(params: { appUrl: string }): string {
+  return EMAIL_WRAPPER(
+    "¡Feliz aniversario! 🎉",
+    `
+    <p style="margin:0 0 16px;color:#6F776F;font-size:14px;line-height:1.5;">
+      Hoy se cumple un año más desde que te sumaste al Club Ciocolatto. Como regalo, tenés
+      un obsequio esperándote esta semana.
+    </p>
+    <p style="margin:0;">
+      <a href="${params.appUrl}/inicio" style="display:inline-block;background:#1C4328;color:#FFFFFF;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;">
+        Reclamar mi regalo
+      </a>
+    </p>
+    `
+  );
+}
+
+export function winbackEmailHtml(params: { firstName: string; appUrl: string }): string {
+  return EMAIL_WRAPPER(
+    "Te extrañamos ☕",
+    `
+    <p style="margin:0 0 16px;color:#6F776F;font-size:14px;line-height:1.5;">
+      Hola ${params.firstName}, hace un tiempo que no te vemos por Ciocolatto. Te dejamos un
+      cupón de <strong style="color:#1E2822;">10% OFF</strong> para tu próxima visita.
+    </p>
+    <p style="margin:0;">
+      <a href="${params.appUrl}/perfil/beneficios" style="display:inline-block;background:#1C4328;color:#FFFFFF;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;">
+        Ver mi cupón
+      </a>
+    </p>
+    `
+  );
+}
+
+export function pointsExpiringEmailHtml(params: { firstName: string; appUrl: string }): string {
+  return EMAIL_WRAPPER(
+    "Tus puntos están por vencer ⏳",
+    `
+    <p style="margin:0 0 16px;color:#6F776F;font-size:14px;line-height:1.5;">
+      Hola ${params.firstName}, parte de tus puntos del Club Ciocolatto van a vencer pronto. Usalos antes de que se pierdan.
+    </p>
+    <p style="margin:0;">
+      <a href="${params.appUrl}/canjear" style="display:inline-block;background:#1C4328;color:#FFFFFF;text-decoration:none;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;">
+        Canjear puntos
+      </a>
+    </p>
+    `
+  );
+}
+
 export function birthdayEmailHtml(params: { firstName: string; drink: string; appUrl: string }): string {
   return EMAIL_WRAPPER(
     "¡Feliz cumpleaños! 🎂",

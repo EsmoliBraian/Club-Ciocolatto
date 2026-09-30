@@ -11,6 +11,7 @@ import { hashPassword } from "@/lib/password";
 import { generateUniqueReferralCode, generateUniqueQrToken } from "@/server/services/customer-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { awardPoints } from "@/server/services/loyalty-service";
+import { approvePointClaim, rejectPointClaim, PointClaimError } from "@/server/services/point-claim-service";
 import { randomBytes } from "crypto";
 import {
   createCustomerSchema,
@@ -150,6 +151,11 @@ function checkbox(formData: FormData, name: string): boolean {
 function optionalString(formData: FormData, name: string): string | undefined {
   const v = String(formData.get(name) ?? "").trim();
   return v || undefined;
+}
+/** "HH:mm" -> minutes since midnight, for Promotion.startMinute/endMinute. */
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 // ── Loyalty tiers ───────────────────────────────────────────────────────
@@ -317,22 +323,32 @@ export async function savePromotionAction(_prev: ActionState, formData: FormData
     segment: optionalString(formData, "segment"),
     startAt: formData.get("startAt"),
     endAt: formData.get("endAt"),
+    daysOfWeek: [0, 1, 2, 3, 4, 5, 6].filter((day) => checkbox(formData, `day_${day}`)),
+    startTime: formData.get("startTime") ?? "",
+    endTime: formData.get("endTime") ?? "",
     active: checkbox(formData, "active"),
   });
   if (!parsed.success) {
     return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
+  const { startTime, endTime, ...promotionRest } = parsed.data;
+  const promotionData = {
+    ...promotionRest,
+    startMinute: startTime ? timeToMinutes(startTime) : null,
+    endMinute: endTime ? timeToMinutes(endTime) : null,
+  };
+
   const promotion = id
-    ? await prisma.promotion.update({ where: { id }, data: parsed.data })
-    : await prisma.promotion.create({ data: parsed.data });
+    ? await prisma.promotion.update({ where: { id }, data: promotionData })
+    : await prisma.promotion.create({ data: promotionData });
 
   await recordAuditLog({
     actorId: actor.id,
     action: id ? "PROMOTION_UPDATED" : "PROMOTION_CREATED",
     entityType: "Promotion",
     entityId: promotion.id,
-    changes: parsed.data,
+    changes: promotionData,
   });
 
   revalidatePath("/admin/promociones");
@@ -370,6 +386,56 @@ export async function saveProductAction(_prev: ActionState, formData: FormData):
   });
 
   revalidatePath("/admin/productos");
+  return { success: true };
+}
+
+// ── Point claims (customer self-reports a review/social post, admin approves) ──
+
+export async function approvePointClaimAction(
+  claimId: string,
+  pointsAwarded: number,
+  reviewNote?: string
+): Promise<ActionState> {
+  const actor = await requireRole(...ADMIN_ROLES);
+  try {
+    await prisma.$transaction((tx) =>
+      approvePointClaim(tx, claimId, { reviewerId: actor.id, pointsAwarded, reviewNote })
+    );
+  } catch (error) {
+    if (error instanceof PointClaimError) return { error: error.message };
+    throw error;
+  }
+
+  await recordAuditLog({
+    actorId: actor.id,
+    action: "POINT_CLAIM_APPROVED",
+    entityType: "PointClaim",
+    entityId: claimId,
+    changes: { pointsAwarded, reviewNote },
+  });
+
+  revalidatePath("/admin/solicitudes");
+  return { success: true };
+}
+
+export async function rejectPointClaimAction(claimId: string, reviewNote?: string): Promise<ActionState> {
+  const actor = await requireRole(...ADMIN_ROLES);
+  try {
+    await prisma.$transaction((tx) => rejectPointClaim(tx, claimId, { reviewerId: actor.id, reviewNote }));
+  } catch (error) {
+    if (error instanceof PointClaimError) return { error: error.message };
+    throw error;
+  }
+
+  await recordAuditLog({
+    actorId: actor.id,
+    action: "POINT_CLAIM_REJECTED",
+    entityType: "PointClaim",
+    entityId: claimId,
+    changes: { reviewNote },
+  });
+
+  revalidatePath("/admin/solicitudes");
   return { success: true };
 }
 
@@ -464,6 +530,15 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
     referralRefereePoints: formData.get("referralRefereePoints"),
     pointsExpireAfterDays: optionalString(formData, "pointsExpireAfterDays"),
     redemptionCodeExpiryHours: formData.get("redemptionCodeExpiryHours"),
+    rewardCooldownDays: optionalString(formData, "rewardCooldownDays"),
+    anniversaryPoints: formData.get("anniversaryPoints"),
+    profileCompletionPoints: formData.get("profileCompletionPoints"),
+    surveyQuestion: formData.get("surveyQuestion") ?? "",
+    surveyPoints: formData.get("surveyPoints"),
+    winbackInactivityDays: formData.get("winbackInactivityDays"),
+    winbackMinimumTierId: optionalString(formData, "winbackMinimumTierId"),
+    referralDuoBonusPoints: formData.get("referralDuoBonusPoints"),
+    referralDuoMilestoneTierId: optionalString(formData, "referralDuoMilestoneTierId"),
     businessName: formData.get("businessName"),
     logoUrl: formData.get("logoUrl") ?? "",
     contactEmail: formData.get("contactEmail") ?? "",
@@ -474,13 +549,18 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
     return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { logoUrl, contactEmail, instagramUrl, ...rest } = parsed.data;
+  const { logoUrl, contactEmail, instagramUrl, surveyQuestion, winbackMinimumTierId, referralDuoMilestoneTierId, ...rest } =
+    parsed.data;
   const data = {
     ...rest,
     logoUrl: logoUrl || null,
     contactEmail: contactEmail || null,
     instagramUrl: instagramUrl || null,
     pointsExpireAfterDays: parsed.data.pointsExpireAfterDays ?? null,
+    rewardCooldownDays: parsed.data.rewardCooldownDays ?? null,
+    surveyQuestion: surveyQuestion || null,
+    winbackMinimumTierId: winbackMinimumTierId || null,
+    referralDuoMilestoneTierId: referralDuoMilestoneTierId || null,
   };
 
   await prisma.loyaltyConfig.upsert({

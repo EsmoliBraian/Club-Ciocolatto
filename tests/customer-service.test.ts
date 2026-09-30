@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 import {
   claimBirthdayReward,
   isBirthdayWindowActive,
+  claimAnniversaryReward,
+  isAnniversaryWindowActive,
+  checkAndAwardProfileCompletion,
   registerCustomer,
   CustomerServiceError,
 } from "@/server/services/customer-service";
 import { createTestCustomer, cleanupTestCustomer } from "./helpers";
-import { BIRTHDAY_COFFEE_REWARD_ID } from "@/lib/constants";
+import { BIRTHDAY_COFFEE_REWARD_ID, ANNIVERSARY_GIFT_REWARD_ID } from "@/lib/constants";
 import type { RegisterInput } from "@/schemas/auth";
 
 describe("customer-service: claimBirthdayReward", () => {
@@ -65,6 +68,84 @@ describe("customer-service: claimBirthdayReward", () => {
     await prisma.user.update({ where: { id: userId }, data: { birthDate: farBirthday } });
 
     await expect(claimBirthdayReward(profileId)).rejects.toBeInstanceOf(CustomerServiceError);
+  });
+});
+
+describe("customer-service: claimAnniversaryReward", () => {
+  let userId: string;
+  let profileId: string;
+
+  beforeEach(async () => {
+    const { user, profile } = await createTestCustomer();
+    userId = user.id;
+    profileId = profile.id;
+  });
+
+  afterEach(async () => {
+    await prisma.rewardRedemption.deleteMany({ where: { customerProfileId: profileId } });
+    await cleanupTestCustomer(userId);
+  });
+
+  it("a brand-new account (0 years old) is not in its anniversary window yet", async () => {
+    const profile = await prisma.customerProfile.findUniqueOrThrow({ where: { id: profileId } });
+    expect(isAnniversaryWindowActive(profile.createdAt)).toBe(false);
+    await expect(claimAnniversaryReward(profileId)).rejects.toMatchObject({ code: "ANNIVERSARY_WINDOW_CLOSED" });
+  });
+
+  it("grants points and a gift redemption exactly one year after registration, once per year", async () => {
+    const oneYearAgo = new Date();
+    oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
+    await prisma.customerProfile.update({ where: { id: profileId }, data: { createdAt: oneYearAgo } });
+    expect(isAnniversaryWindowActive(oneYearAgo)).toBe(true);
+
+    const result = await claimAnniversaryReward(profileId);
+    expect(result.redemptionCode).toBeTruthy();
+    expect(result.pointsAwarded).toBeGreaterThan(0);
+
+    const redemption = await prisma.rewardRedemption.findUnique({ where: { redemptionCode: result.redemptionCode! } });
+    expect(redemption?.rewardId).toBe(ANNIVERSARY_GIFT_REWARD_ID);
+
+    await expect(claimAnniversaryReward(profileId)).rejects.toMatchObject({ code: "ALREADY_CLAIMED" });
+  });
+});
+
+describe("customer-service: checkAndAwardProfileCompletion", () => {
+  let userId: string;
+  let profileId: string;
+
+  beforeEach(async () => {
+    const { user, profile } = await createTestCustomer();
+    userId = user.id;
+    profileId = profile.id;
+  });
+
+  afterEach(async () => {
+    await cleanupTestCustomer(userId);
+  });
+
+  it("does nothing while any of the required fields are still missing", async () => {
+    await checkAndAwardProfileCompletion(userId);
+    const profile = await prisma.customerProfile.findUniqueOrThrow({ where: { id: profileId } });
+    expect(profile.profileCompletionAwardedAt).toBeNull();
+  });
+
+  it("awards the bonus exactly once, the moment every field is filled in", async () => {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { phone: `+549complete${randomUUID().slice(0, 6)}`, birthDate: new Date("1995-01-01"), favoriteDrink: "Latte", avatarUrl: "https://example.com/a.png" },
+    });
+
+    await checkAndAwardProfileCompletion(userId);
+    const profile = await prisma.customerProfile.findUniqueOrThrow({ where: { id: profileId } });
+    expect(profile.profileCompletionAwardedAt).not.toBeNull();
+
+    const tx = await prisma.pointTransaction.findMany({ where: { customerProfileId: profileId, source: "PROFILE_COMPLETION" } });
+    expect(tx).toHaveLength(1);
+
+    // Calling it again (e.g. after another profile edit) must not re-pay it.
+    await checkAndAwardProfileCompletion(userId);
+    const txAfter = await prisma.pointTransaction.findMany({ where: { customerProfileId: profileId, source: "PROFILE_COMPLETION" } });
+    expect(txAfter).toHaveLength(1);
   });
 });
 

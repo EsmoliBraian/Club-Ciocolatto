@@ -91,6 +91,19 @@ export const promotionSchema = z.object({
   segment: z.string().trim().optional(),
   startAt: z.coerce.date(),
   endAt: z.coerce.date(),
+  daysOfWeek: z.array(z.coerce.number().int().min(0).max(6)).default([]),
+  startTime: z
+    .string()
+    .trim()
+    .regex(/^\d{2}:\d{2}$/, "Formato HH:mm")
+    .optional()
+    .or(z.literal("")),
+  endTime: z
+    .string()
+    .trim()
+    .regex(/^\d{2}:\d{2}$/, "Formato HH:mm")
+    .optional()
+    .or(z.literal("")),
   active: z.coerce.boolean().default(true),
 });
 export type PromotionInput = z.infer<typeof promotionSchema>;
@@ -115,6 +128,15 @@ export const loyaltyConfigSchema = z.object({
   referralRefereePoints: z.coerce.number().int().min(0),
   pointsExpireAfterDays: z.coerce.number().int().min(0).optional(),
   redemptionCodeExpiryHours: z.coerce.number().int().min(1),
+  rewardCooldownDays: z.coerce.number().int().min(0).optional(),
+  anniversaryPoints: z.coerce.number().int().min(0),
+  profileCompletionPoints: z.coerce.number().int().min(0),
+  surveyQuestion: z.string().trim().optional().or(z.literal("")),
+  surveyPoints: z.coerce.number().int().min(0),
+  winbackInactivityDays: z.coerce.number().int().min(1),
+  winbackMinimumTierId: z.string().trim().optional(),
+  referralDuoBonusPoints: z.coerce.number().int().min(0),
+  referralDuoMilestoneTierId: z.string().trim().optional(),
   businessName: z.string().trim().min(1),
   logoUrl: z.string().trim().url().optional().or(z.literal("")),
   contactEmail: z.string().trim().email().optional().or(z.literal("")),

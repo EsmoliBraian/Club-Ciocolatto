@@ -2,13 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Coffee } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { getCustomerProfileByUserId, isBirthdayWindowActive } from "@/server/services/customer-service";
+import {
+  getCustomerProfileByUserId,
+  isBirthdayWindowActive,
+  isAnniversaryWindowActive,
+} from "@/server/services/customer-service";
 import { listActiveTiersCached, calculateTierProgress } from "@/server/services/tier-service";
 import { listRewardsForCustomer } from "@/server/services/reward-service";
 import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
+import { getSurveyStateForCustomer } from "@/server/services/survey-service";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
+import { AnniversaryBanner } from "@/components/customer/anniversary-banner";
+import { SurveyCard } from "@/components/customer/survey-card";
 import { MissionCard } from "@/components/customer/mission-card";
 import { TierBadgeButton } from "@/components/customer/tier-badge-button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -23,10 +30,11 @@ export default async function CustomerHomePage() {
 
   // Independent reads — parallelized so the page waits on the slowest one,
   // not the sum of all three.
-  const [tiers, rewards, rawMissions] = await Promise.all([
+  const [tiers, rewards, rawMissions, surveyState] = await Promise.all([
     listActiveTiersCached(),
     listRewardsForCustomer(profile.id),
     getMissionsForCustomer(profile.id),
+    getSurveyStateForCustomer(profile.id),
   ]);
   const progress = calculateTierProgress(profile.lifetimePoints, tiers);
   const missions = filterVisibleMissions(rawMissions);
@@ -44,15 +52,23 @@ export default async function CustomerHomePage() {
   const showBirthday =
     isBirthdayWindowActive(profile.user.birthDate) &&
     profile.birthdayRewardClaimedYear !== new Date().getFullYear();
+  const showAnniversary =
+    isAnniversaryWindowActive(profile.createdAt) &&
+    profile.anniversaryRewardClaimedYear !== new Date().getFullYear();
 
   const initials = `${profile.user.firstName[0]}${profile.user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pt-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-heading text-xl font-semibold text-foreground">
-          Hola, {profile.user.firstName} 👋
-        </h1>
+        <div>
+          <h1 className="font-heading text-xl font-semibold text-foreground">
+            Hola, {profile.user.firstName} 👋
+          </h1>
+          {profile.visitStreakWeeks > 1 && (
+            <p className="text-xs font-medium text-cc-gold-400">🔥 {profile.visitStreakWeeks} semanas seguidas</p>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Link href="/perfil">
             <Avatar className="size-10">
@@ -70,8 +86,11 @@ export default async function CustomerHomePage() {
       </div>
 
       {showBirthday && <BirthdayBanner favoriteDrink={profile.user.favoriteDrink} />}
+      {showAnniversary && <AnniversaryBanner />}
 
       <TierProgressCard pointsBalance={profile.pointsBalance} progress={progress} />
+
+      {surveyState.question && !surveyState.alreadyAnswered && <SurveyCard question={surveyState.question} />}
 
       {nextBenefit && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">

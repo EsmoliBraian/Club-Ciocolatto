@@ -41,6 +41,12 @@ enum PointSource {
   MANUAL_ADMIN
   REDEMPTION
   REDEMPTION_CANCELLED
+  ANNIVERSARY
+  VISIT_STREAK
+  PROFILE_COMPLETION
+  SURVEY_RESPONSE
+  CLAIM_APPROVED
+  REFERRAL_DUO
 }
 
 enum MissionType {
@@ -80,6 +86,18 @@ enum ReferralStatus {
   REJECTED
 }
 
+enum PointClaimType {
+  SOCIAL_MEDIA_POST
+  REVIEW
+  CUSTOM
+}
+
+enum PointClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum PromotionType {
   POINTS_MULTIPLIER
   BONUS_POINTS
@@ -95,6 +113,9 @@ enum NotificationType {
   BIRTHDAY
   REFERRAL_COMPLETED
   GENERAL
+  ANNIVERSARY
+  WINBACK
+  POINTS_EXPIRING
 }
 
 enum NotificationChannel {
@@ -143,6 +164,7 @@ model User {
   notifications       Notification[]
   redeemedByEntries   RewardRedemption[]   @relation("RedeemedByEmployee")
   passwordResetTokens PasswordResetToken[]
+  reviewedPointClaims PointClaim[]         @relation("PointClaimReviewer")
 
   @@index([role])
 }
@@ -151,22 +173,29 @@ model User {
 // accounts never carry loyalty fields, and so the loyalty engine only ever
 // deals with a narrow, purpose-built shape.
 model CustomerProfile {
-  id                        String       @id @default(cuid())
-  userId                    String       @unique
-  user                      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pointsBalance             Int          @default(0) // spendable balance — reconstructable as SUM(PointTransaction.amount)
-  lifetimePoints            Int          @default(0) // status/tier basis — never reduced by REDEEM or EXPIRATION
-  tierId                    String?
-  tier                      LoyaltyTier? @relation(fields: [tierId], references: [id])
-  qrToken                   String       @unique // opaque, cryptographically random identifier embedded in the customer's QR (see src/lib/codes.ts)
-  referralCode              String       @unique
-  totalSpent                Decimal      @default(0) @db.Decimal(12, 2)
-  totalOrders               Int          @default(0)
-  firstOrderAt              DateTime?
-  lastOrderAt               DateTime?
-  birthdayRewardClaimedYear Int?
-  createdAt                 DateTime     @default(now())
-  updatedAt                 DateTime     @updatedAt
+  id                           String       @id @default(cuid())
+  userId                       String       @unique
+  user                         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointsBalance                Int          @default(0) // spendable balance — reconstructable as SUM(PointTransaction.amount)
+  lifetimePoints               Int          @default(0) // status/tier basis — never reduced by REDEEM or EXPIRATION
+  tierId                       String?
+  tier                         LoyaltyTier? @relation(fields: [tierId], references: [id])
+  qrToken                      String       @unique // opaque, cryptographically random identifier embedded in the customer's QR (see src/lib/codes.ts)
+  referralCode                 String       @unique
+  totalSpent                   Decimal      @default(0) @db.Decimal(12, 2)
+  totalOrders                  Int          @default(0)
+  firstOrderAt                 DateTime?
+  lastOrderAt                  DateTime?
+  birthdayRewardClaimedYear    Int?
+  anniversaryRewardClaimedYear Int?
+  visitStreakWeeks             Int          @default(0)
+  visitStreakWeekIndex         Int? // Monday-aligned week counter in business-local time, see src/lib/timezone.ts
+  visitStreakMilestoneWeeks    Int          @default(0)
+  profileCompletionAwardedAt   DateTime?
+  lastWinbackSentAt            DateTime?
+  lastPointsExpiryWarningAt    DateTime?
+  createdAt                    DateTime     @default(now())
+  updatedAt                    DateTime     @updatedAt
 
   pointTransactions PointTransaction[]
   orders            Order[]
@@ -174,6 +203,8 @@ model CustomerProfile {
   redemptions       RewardRedemption[]
   referralsSent     Referral[]         @relation("Referrer")
   referralReceived  Referral?          @relation("Referee")
+  pointClaims       PointClaim[]
+  surveyResponse    SurveyResponse?
 
   @@index([tierId])
   @@index([lastOrderAt])
@@ -199,8 +230,10 @@ model LoyaltyTier {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  customers CustomerProfile[]
-  rewards   Reward[]
+  customers          CustomerProfile[]
+  rewards            Reward[]
+  winbackConfigs     LoyaltyConfig[]   @relation("WinbackMinimumTier")
+  referralDuoConfigs LoyaltyConfig[]   @relation("ReferralDuoMilestoneTier")
 
   @@index([displayOrder])
 }
@@ -405,6 +438,7 @@ model Referral {
   referrerPointsAwarded Int             @default(0)
   refereePointsAwarded  Int             @default(0)
   completedAt           DateTime?
+  duoBonusPaidAt        DateTime?
   createdAt             DateTime        @default(now())
 
   @@index([referrerId, status])
@@ -424,6 +458,13 @@ model Promotion {
   segment     String? // segmentation key; null = all customers
   startAt     DateTime
   endAt       DateTime
+  // Optional recurring time-of-day/day-of-week refinement, layered on top of
+  // the startAt/endAt campaign window above (e.g. campaign runs Oct-Dec, but
+  // only actually applies Tuesdays 15:00-18:00 within that range). Evaluated
+  // in business-local time (see src/lib/timezone.ts) — Vercel runs in UTC.
+  daysOfWeek  Int[]         @default([]) // 0=Sun..6=Sat (JS Date#getDay convention); [] = every day
+  startMinute Int? // minutes since local midnight; null (with endMinute) = no time-of-day restriction
+  endMinute   Int?
   active      Boolean       @default(true)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -469,26 +510,72 @@ model AuditLog {
 // Singleton row (id is always "singleton") holding every tunable of the
 // loyalty program so none of it is hardcoded in application code.
 model LoyaltyConfig {
-  id                        String   @id @default("singleton")
-  amountPerPoint            Decimal  @default(1000) @db.Decimal(10, 2) // $ spent per pointsPerAmount earned
-  pointsPerAmount           Decimal  @default(1) @db.Decimal(10, 4)
-  registrationPoints        Int      @default(30)
-  firstPurchasePoints       Int      @default(50)
-  birthdayPoints            Int      @default(100)
+  id                         String       @id @default("singleton")
+  amountPerPoint             Decimal      @default(1000) @db.Decimal(10, 2) // $ spent per pointsPerAmount earned
+  pointsPerAmount            Decimal      @default(1) @db.Decimal(10, 4)
+  registrationPoints         Int          @default(30)
+  firstPurchasePoints        Int          @default(50)
+  birthdayPoints             Int          @default(100)
   // Flat per-referral bonus, superseded by the REFERRAL mission ladder
   // (1/5/10 friends — see prisma/seed.ts) as of 2026-08-29; kept at 0 so a
   // completed referral isn't paid twice. Still admin-editable if a flat
   // top-up on top of the ladder is ever wanted again.
-  referralSponsorPoints     Int      @default(0)
-  referralRefereePoints     Int      @default(100)
-  pointsExpireAfterDays     Int? // null = points never expire
-  redemptionCodeExpiryHours Int      @default(72)
-  businessName              String   @default("Ciocolatto")
-  logoUrl                   String?
-  contactEmail              String?
-  contactPhone              String?
-  instagramUrl              String?
-  updatedAt                 DateTime @updatedAt
+  referralSponsorPoints      Int          @default(0)
+  referralRefereePoints      Int          @default(100)
+  pointsExpireAfterDays      Int? // null = points never expire
+  redemptionCodeExpiryHours  Int          @default(72)
+  rewardCooldownDays         Int?         @default(30) // null = no cooldown; days before a customer can redeem the SAME reward again
+  anniversaryPoints          Int          @default(150)
+  profileCompletionPoints    Int          @default(50)
+  surveyQuestion             String? // null = survey feature off
+  surveyPoints               Int          @default(30)
+  winbackInactivityDays      Int          @default(35)
+  winbackMinimumTierId       String?
+  winbackMinimumTier         LoyaltyTier? @relation("WinbackMinimumTier", fields: [winbackMinimumTierId], references: [id])
+  referralDuoBonusPoints     Int          @default(100)
+  referralDuoMilestoneTierId String?
+  referralDuoMilestoneTier   LoyaltyTier? @relation("ReferralDuoMilestoneTier", fields: [referralDuoMilestoneTierId], references: [id])
+  businessName               String       @default("Ciocolatto")
+  logoUrl                    String?
+  contactEmail               String?
+  contactPhone               String?
+  instagramUrl               String?
+  updatedAt                  DateTime     @updatedAt
+}
+
+// Customer self-report for a non-verifiable loyalty action (e.g. an
+// Instagram post, a Google review) that an admin must manually approve
+// before points are granted. Generic/reusable by `type` rather than a
+// one-off table per action, so future non-automatable actions reuse this
+// same queue.
+model PointClaim {
+  id                String           @id @default(cuid())
+  customerProfileId String
+  customerProfile   CustomerProfile  @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  type              PointClaimType
+  description       String?
+  proofUrl          String?
+  pointsRequested   Int
+  pointsAwarded     Int?
+  status            PointClaimStatus @default(PENDING)
+  reviewedById      String?
+  reviewedBy        User?            @relation("PointClaimReviewer", fields: [reviewedById], references: [id])
+  reviewNote        String?
+  createdAt         DateTime         @default(now())
+  reviewedAt        DateTime?
+
+  @@index([status, createdAt])
+  @@index([customerProfileId, type])
+}
+
+// One lifetime response per customer to the current LoyaltyConfig.surveyQuestion.
+model SurveyResponse {
+  id                String          @id @default(cuid())
+  customerProfileId String          @unique
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  question          String // snapshot of config.surveyQuestion at time of answering
+  answer            String
+  createdAt         DateTime        @default(now())
 }
 
 // Credentials issued to the Ciocolatto POS for the future integration
@@ -511,13 +598,13 @@ model ApiKey {
 // the hash is stored (same pattern as ApiKey) so a DB leak alone can't be
 // used to reset accounts.
 model PasswordResetToken {
-  id         String    @id @default(cuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }

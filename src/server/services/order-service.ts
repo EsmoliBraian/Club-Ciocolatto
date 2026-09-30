@@ -6,6 +6,8 @@ import { getLoyaltyConfig, calculatePointsForAmount } from "@/server/services/co
 import { evaluateMissionsForOrder } from "@/server/services/mission-service";
 import { completeReferralOnFirstPurchase } from "@/server/services/referral-service";
 import { recordAuditLog } from "@/server/services/audit-service";
+import { updateVisitStreak } from "@/server/services/streak-service";
+import { toBusinessLocalParts } from "@/lib/timezone";
 
 export class OrderServiceError extends Error {
   constructor(public code: string, message: string) {
@@ -70,6 +72,8 @@ async function applyPromotions(db: Db, points: number, items: ResolvedItem[]): P
     where: { active: true, startAt: { lte: now }, endAt: { gte: now } },
   });
 
+  const { dayOfWeek, minuteOfDay } = toBusinessLocalParts(now);
+
   let multiplier = 1;
   let bonus = 0;
   for (const promo of promotions) {
@@ -82,6 +86,14 @@ async function applyPromotions(db: Db, points: number, items: ResolvedItem[]): P
           (promo.productId && i.productId === promo.productId)
       );
     if (!applies) continue;
+
+    const appliesDay = promo.daysOfWeek.length === 0 || promo.daysOfWeek.includes(dayOfWeek);
+    const inTimeWindow =
+      promo.startMinute == null ||
+      promo.endMinute == null ||
+      (minuteOfDay >= promo.startMinute && minuteOfDay < promo.endMinute);
+    if (!appliesDay || !inTimeWindow) continue;
+
     if (promo.type === "POINTS_MULTIPLIER" && promo.multiplier) {
       multiplier = Math.max(multiplier, Number(promo.multiplier));
     }
@@ -243,6 +255,7 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
     });
 
     await completeReferralOnFirstPurchase(tx, profile.id);
+    await updateVisitStreak(tx, profile.id, order.createdAt);
 
     const totalPoints =
       purchasePoints + (isFirstOrder && config.firstPurchasePoints > 0 ? config.firstPurchasePoints : 0);

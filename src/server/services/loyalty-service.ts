@@ -3,6 +3,8 @@ import type { Db } from "@/types/db";
 import type { PointSource, PointTransaction, PointTransactionType, Prisma } from "@prisma/client";
 import { listActiveTiers, resolveTierForPoints } from "@/server/services/tier-service";
 import { notify } from "@/server/services/notification-service";
+import { getLoyaltyConfig } from "@/server/services/config-service";
+import type { LoyaltyTier } from "@prisma/client";
 
 export interface AwardPointsInput {
   customerProfileId: string;
@@ -116,6 +118,9 @@ export async function awardPoints(
       },
       db
     );
+
+    const rank = tiers.findIndex((t) => t.id === newTier.id);
+    await maybeAwardReferralDuoBonus(db, input.customerProfileId, rank, tiers);
   }
 
   return {
@@ -125,6 +130,72 @@ export async function awardPoints(
     previousTierId: previousTier?.id ?? null,
     newTierId: newTier?.id ?? null,
   };
+}
+
+/**
+ * One-time bonus for both sides of a completed referral once they're BOTH
+ * simultaneously at-or-above the configured milestone tier (not re-paid on
+ * every later tier crossing). Lives inside awardPoints() itself — the single
+ * choke point every points change already passes through — rather than at
+ * each of its call sites, and queries referral-service's tables directly to
+ * avoid a circular import (referral-service.ts already imports awardPoints).
+ */
+async function maybeAwardReferralDuoBonus(
+  db: Db,
+  customerProfileId: string,
+  rank: number,
+  tiers: LoyaltyTier[]
+): Promise<void> {
+  const config = await getLoyaltyConfig(db);
+  if (!config.referralDuoMilestoneTierId) return;
+  const milestoneRank = tiers.findIndex((t) => t.id === config.referralDuoMilestoneTierId);
+  if (milestoneRank === -1 || rank < milestoneRank) return;
+
+  const pendingReferrals = await db.referral.findMany({
+    where: {
+      status: "COMPLETED",
+      duoBonusPaidAt: null,
+      OR: [{ referrerId: customerProfileId }, { refereeId: customerProfileId }],
+    },
+  });
+
+  for (const referral of pendingReferrals) {
+    const otherId = referral.referrerId === customerProfileId ? referral.refereeId : referral.referrerId;
+    const other = await db.customerProfile.findUniqueOrThrow({ where: { id: otherId } });
+    const otherTier = resolveTierForPoints(other.lifetimePoints, tiers);
+    const otherRank = otherTier ? tiers.findIndex((t) => t.id === otherTier.id) : -1;
+    if (otherRank < milestoneRank) continue;
+
+    // Mark paid BEFORE the nested awardPoints calls below — if either of
+    // those itself crosses another tier and re-enters this function, the
+    // query above no longer finds this referral, so it can't double-pay.
+    await db.referral.update({ where: { id: referral.id }, data: { duoBonusPaidAt: new Date() } });
+
+    await awardPoints(
+      {
+        customerProfileId: referral.referrerId,
+        type: "BONUS",
+        source: "REFERRAL_DUO",
+        amount: config.referralDuoBonusPoints,
+        description: "Bono dúo de referidos 🎊",
+        referenceType: "Referral",
+        referenceId: referral.id,
+      },
+      db
+    );
+    await awardPoints(
+      {
+        customerProfileId: referral.refereeId,
+        type: "BONUS",
+        source: "REFERRAL_DUO",
+        amount: config.referralDuoBonusPoints,
+        description: "Bono dúo de referidos 🎊",
+        referenceType: "Referral",
+        referenceId: referral.id,
+      },
+      db
+    );
+  }
 }
 
 /** Rebuilds a customer's cached balance/lifetime points from the ledger — for audits or repairs. */

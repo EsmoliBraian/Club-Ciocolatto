@@ -7,7 +7,7 @@ import { validateReferralCode, createReferral, ReferralError } from "@/server/se
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { grantFreeReward } from "@/server/services/reward-service";
-import { BIRTHDAY_COFFEE_REWARD_ID } from "@/lib/constants";
+import { BIRTHDAY_COFFEE_REWARD_ID, ANNIVERSARY_GIFT_REWARD_ID } from "@/lib/constants";
 import type { RegisterInput } from "@/schemas/auth";
 
 export class CustomerServiceError extends Error {
@@ -222,5 +222,131 @@ export async function claimBirthdayReward(customerProfileId: string) {
     }
 
     return { pointsAwarded: config.birthdayPoints, drink, redemptionCode };
+  });
+}
+
+/**
+ * True when `createdAt`'s month/day falls within `windowDays` of today,
+ * either side — same logic as `isBirthdayWindowActive`, keyed off the
+ * registration date instead of birth date. An account isn't eligible on its
+ * own registration day (that's not an anniversary yet — needs a full year).
+ */
+export function isAnniversaryWindowActive(
+  createdAt: Date,
+  windowDays = 7,
+  now = new Date()
+): boolean {
+  const yearsSinceRegistration = now.getFullYear() - createdAt.getUTCFullYear();
+  if (yearsSinceRegistration < 1) return false;
+  const year = now.getFullYear();
+  const thisYear = new Date(year, createdAt.getUTCMonth(), createdAt.getUTCDate());
+  const diffDays = Math.abs((now.getTime() - thisYear.getTime()) / 86_400_000);
+  const wrapDiffDays = 365 - diffDays;
+  return Math.min(diffDays, wrapDiffDays) <= windowDays;
+}
+
+export async function claimAnniversaryReward(customerProfileId: string) {
+  const config = await getLoyaltyConfig();
+
+  return prisma.$transaction(async (tx) => {
+    const profile = await tx.customerProfile.findUniqueOrThrow({
+      where: { id: customerProfileId },
+      include: { user: true },
+    });
+
+    if (!isAnniversaryWindowActive(profile.createdAt)) {
+      throw new CustomerServiceError("ANNIVERSARY_WINDOW_CLOSED", "Todavía no es tu semana de aniversario.");
+    }
+
+    const currentYear = new Date().getFullYear();
+    if (profile.anniversaryRewardClaimedYear === currentYear) {
+      throw new CustomerServiceError("ALREADY_CLAIMED", "Ya reclamaste tu regalo de aniversario este año.");
+    }
+
+    await tx.customerProfile.update({
+      where: { id: profile.id },
+      data: { anniversaryRewardClaimedYear: currentYear },
+    });
+
+    if (config.anniversaryPoints > 0) {
+      await awardPoints(
+        {
+          customerProfileId: profile.id,
+          type: "BONUS",
+          source: "ANNIVERSARY",
+          amount: config.anniversaryPoints,
+          description: "Aniversario de socio 🎉",
+          referenceType: "Anniversary",
+          referenceId: String(currentYear),
+          silent: true,
+        },
+        tx
+      );
+    }
+
+    const anniversaryReward = await tx.reward.findUnique({ where: { id: ANNIVERSARY_GIFT_REWARD_ID } });
+
+    let redemptionCode: string | null = null;
+    if (anniversaryReward?.active) {
+      const granted = await grantFreeReward(tx, {
+        customerProfileId: profile.id,
+        rewardId: anniversaryReward.id,
+        notificationTitle: "¡Feliz aniversario! 🎉",
+        notificationBody: `Tenés un regalo esperándote — mostrá el código en caja. También sumaste ${config.anniversaryPoints} puntos.`,
+      });
+      redemptionCode = granted.redemptionCode;
+    } else {
+      await notify(
+        {
+          userId: profile.user.id,
+          type: "ANNIVERSARY",
+          title: "¡Feliz aniversario! 🎉",
+          body: `Sumaste ${config.anniversaryPoints} puntos de regalo.`,
+        },
+        tx
+      );
+    }
+
+    return { pointsAwarded: config.anniversaryPoints, redemptionCode };
+  });
+}
+
+/**
+ * Awards a one-time bonus the first time a customer's profile has every
+ * "nice to have" field filled in (all mandatory at self-registration except
+ * avatarUrl, so this mostly rewards admin-created walk-ins backfilling data
+ * and everyone adding a profile photo). Self-transacting since it's called
+ * from two independent actions, not nested inside a larger transaction.
+ */
+export async function checkAndAwardProfileCompletion(userId: string): Promise<void> {
+  const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, include: { customerProfile: true } });
+  if (!user.customerProfile || user.customerProfile.profileCompletionAwardedAt) return;
+  if (!(user.phone && user.birthDate && user.favoriteDrink && user.avatarUrl)) return;
+
+  const config = await getLoyaltyConfig();
+
+  await prisma.$transaction(async (tx) => {
+    const profile = await tx.customerProfile.findUniqueOrThrow({ where: { id: user.customerProfile!.id } });
+    if (profile.profileCompletionAwardedAt) return; // race guard
+
+    await tx.customerProfile.update({
+      where: { id: profile.id },
+      data: { profileCompletionAwardedAt: new Date() },
+    });
+
+    if (config.profileCompletionPoints > 0) {
+      await awardPoints(
+        {
+          customerProfileId: profile.id,
+          type: "EARN",
+          source: "PROFILE_COMPLETION",
+          amount: config.profileCompletionPoints,
+          description: "Perfil completo 🙌",
+          referenceType: "User",
+          referenceId: userId,
+        },
+        tx
+      );
+    }
   });
 }

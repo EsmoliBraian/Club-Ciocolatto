@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, UserCog, Receipt, Star, Gift as GiftIcon, Users, Sparkles, Activity, Palette } from "lucide-react";
+import { ChevronRight, UserCog, Receipt, Star, Gift as GiftIcon, Users, Sparkles, Activity, Palette, Megaphone } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
@@ -18,6 +18,7 @@ const MENU = [
   { href: "/perfil/puntos", label: "Mis puntos", icon: Star },
   { href: "/perfil/beneficios", label: "Mis beneficios", icon: GiftIcon },
   { href: "/perfil/referidos", label: "Invitá amigos", icon: Users },
+  { href: "/perfil/acciones", label: "Sumá puntos extra", icon: Megaphone },
 ];
 
 export default async function ProfilePage() {

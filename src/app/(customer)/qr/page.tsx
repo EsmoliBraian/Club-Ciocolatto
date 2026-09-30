@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import QRCode from "qrcode";
+import { Wallet } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
+import { buildSaveToWalletUrl } from "@/lib/google-wallet";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = { title: "Mi QR" };
 
@@ -15,6 +18,7 @@ export default async function QrPage() {
     width: 320,
     color: { dark: "#1c4328", light: "#00000000" },
   });
+  const walletUrl = buildSaveToWalletUrl(profile, profile.tier);
 
   return (
     <div className="mx-auto flex max-w-lg flex-col items-center gap-6 px-4 pt-10 text-center">
@@ -37,6 +41,13 @@ export default async function QrPage() {
           </div>
         </div>
       </div>
+
+      {walletUrl && (
+        <Button variant="outline" render={<a href={walletUrl} />}>
+          <Wallet className="size-4" />
+          Agregar a Google Wallet
+        </Button>
+      )}
     </div>
   );
 }

@@ -35,6 +35,8 @@ export async function cleanupTestCustomer(userId: string) {
     await prisma.pointTransaction.deleteMany({ where: { customerProfileId: profile.id } });
     await prisma.rewardRedemption.deleteMany({ where: { customerProfileId: profile.id } });
     await prisma.missionProgress.deleteMany({ where: { customerProfileId: profile.id } });
+    await prisma.pointClaim.deleteMany({ where: { customerProfileId: profile.id } });
+    await prisma.surveyResponse.deleteMany({ where: { customerProfileId: profile.id } });
     await prisma.referral.deleteMany({
       where: { OR: [{ referrerId: profile.id }, { refereeId: profile.id }] },
     });

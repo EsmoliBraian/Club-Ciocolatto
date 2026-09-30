@@ -29,8 +29,15 @@ const TYPE_LABELS: Record<string, string> = {
   DISCOUNT: "Descuento",
 };
 
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]; // 0=Sun, matches JS Date#getDay
+
 function toDateInput(d?: Date | null) {
   return d ? d.toISOString().slice(0, 10) : undefined;
+}
+
+function toTimeInput(minutes?: number | null) {
+  if (minutes == null) return undefined;
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
 export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
@@ -107,6 +114,31 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Desde" name="startAt" type="date" defaultValue={toDateInput(promotion?.startAt)} required />
             <Field label="Hasta" name="endAt" type="date" defaultValue={toDateInput(promotion?.endAt)} required />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Días de la semana (ninguno marcado = todos)</Label>
+            <div className="flex flex-wrap gap-2">
+              {DAY_LABELS.map((label, day) => (
+                <label key={day} className="flex items-center gap-1 text-xs">
+                  <Checkbox name={`day_${day}`} defaultChecked={promotion?.daysOfWeek?.includes(day) ?? false} />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Desde hora (opcional)"
+              name="startTime"
+              type="time"
+              defaultValue={toTimeInput(promotion?.startMinute)}
+            />
+            <Field
+              label="Hasta hora (opcional)"
+              name="endTime"
+              type="time"
+              defaultValue={toTimeInput(promotion?.endMinute)}
+            />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox name="active" defaultChecked={promotion?.active ?? true} />

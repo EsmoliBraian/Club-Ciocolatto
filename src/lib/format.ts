@@ -19,6 +19,10 @@ export function formatDateTime(date: Date): string {
   return format(date, "d MMM yyyy, HH:mm", { locale: es });
 }
 
+export function formatDate(date: Date): string {
+  return format(date, "dd/MM", { locale: es });
+}
+
 /** Groups a list of items by day label ("Hoy", "Ayer", "12 de agosto"), preserving order. */
 export function groupByDay<T>(items: T[], getDate: (item: T) => Date): { label: string; items: T[] }[] {
   const groups: { label: string; items: T[] }[] = [];

@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   Smartphone,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
@@ -27,6 +28,7 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/canjes", label: "Canjes", icon: TicketCheck },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
   { href: "/admin/referidos", label: "Referidos", icon: UserPlus },
+  { href: "/admin/solicitudes", label: "Solicitudes", icon: Inbox },
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
   { href: "/admin/configuracion", label: "Configuración", icon: Settings },
 ];
