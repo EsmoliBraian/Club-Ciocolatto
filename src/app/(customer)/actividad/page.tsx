@@ -1,5 +1,17 @@
 import type { Metadata } from "next";
-import { Coins, Gift, TrendingUp, Trophy, Cake, Users, Bell, PartyPopper, HeartHandshake, Hourglass } from "lucide-react";
+import {
+  Coins,
+  Gift,
+  TrendingUp,
+  Trophy,
+  Cake,
+  Users,
+  Bell,
+  PartyPopper,
+  HeartHandshake,
+  Hourglass,
+  Megaphone,
+} from "lucide-react";
 import { auth } from "@/lib/auth";
 import { listRecentNotifications, markAllNotificationsRead } from "@/server/services/notification-service";
 import { groupByDay } from "@/lib/format";
@@ -19,6 +31,7 @@ const TYPE_META: Record<string, { icon: typeof Bell; style: string }> = {
   REFERRAL_COMPLETED: { icon: Users, style: "bg-violet-100 text-violet-600" },
   WINBACK: { icon: HeartHandshake, style: "bg-cyan-100 text-cyan-600" },
   POINTS_EXPIRING: { icon: Hourglass, style: "bg-red-100 text-red-600" },
+  ANNOUNCEMENT: { icon: Megaphone, style: "bg-indigo-100 text-indigo-600" },
   GENERAL: { icon: Bell, style: "bg-secondary text-primary" },
 };
 

@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Smartphone,
   Inbox,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LogoutMenuRow } from "@/components/shared/logout-menu-row";
@@ -27,6 +28,7 @@ export const ADMIN_NAV_ITEMS = [
   { href: "/admin/premios", label: "Premios", icon: Gift },
   { href: "/admin/canjes", label: "Canjes", icon: TicketCheck },
   { href: "/admin/promociones", label: "Promociones", icon: Megaphone },
+  { href: "/admin/avisos", label: "Avisos", icon: Send, superAdminOnly: true },
   { href: "/admin/referidos", label: "Referidos", icon: UserPlus },
   { href: "/admin/solicitudes", label: "Solicitudes", icon: Inbox },
   { href: "/admin/auditoria", label: "Auditoría", icon: ShieldCheck },
@@ -36,15 +38,17 @@ export const ADMIN_NAV_ITEMS = [
 export function AdminNavLinks({
   onNavigate,
   pendingSolicitudesCount = 0,
+  isSuperAdmin = false,
 }: {
   onNavigate?: () => void;
   pendingSolicitudesCount?: number;
+  isSuperAdmin?: boolean;
 }) {
   const pathname = usePathname();
 
   return (
     <nav className="flex flex-1 flex-col gap-0.5">
-      {ADMIN_NAV_ITEMS.map((item) => {
+      {ADMIN_NAV_ITEMS.filter((item) => !item.superAdminOnly || isSuperAdmin).map((item) => {
         const active = item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href);
         const showBadge = item.href === "/admin/solicitudes" && pendingSolicitudesCount > 0;
         return (
@@ -105,10 +109,12 @@ export function AdminSidebar({
   userName,
   userRole,
   pendingSolicitudesCount,
+  isSuperAdmin,
 }: {
   userName: string;
   userRole: string;
   pendingSolicitudesCount?: number;
+  isSuperAdmin?: boolean;
 }) {
   return (
     <aside className="hidden w-64 shrink-0 flex-col gap-5 border-r border-border bg-card px-3 py-5 md:flex">
@@ -117,7 +123,7 @@ export function AdminSidebar({
         <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
         <p className="text-xs text-muted-foreground">{userRole}</p>
       </div>
-      <AdminNavLinks pendingSolicitudesCount={pendingSolicitudesCount} />
+      <AdminNavLinks pendingSolicitudesCount={pendingSolicitudesCount} isSuperAdmin={isSuperAdmin} />
       <DownloadAppCard />
       <div className="border-t border-border pt-2">
         <LogoutMenuRow variant="light" />

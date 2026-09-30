@@ -12,6 +12,7 @@ import { generateUniqueReferralCode, generateUniqueQrToken } from "@/server/serv
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { awardPoints } from "@/server/services/loyalty-service";
 import { approvePointClaim, rejectPointClaim, PointClaimError } from "@/server/services/point-claim-service";
+import { sendAnnouncement } from "@/server/services/notification-service";
 import { randomBytes } from "crypto";
 import {
   createCustomerSchema,
@@ -437,6 +438,33 @@ export async function rejectPointClaimAction(claimId: string, reviewNote?: strin
 
   revalidatePath("/admin/solicitudes");
   return { success: true };
+}
+
+// ── Announcements (superadmin broadcasts a message to customers) ──
+
+export async function sendAnnouncementAction(
+  title: string,
+  body: string,
+  tierId: string | null
+): Promise<ActionState & { recipientCount?: number }> {
+  const actor = await requireRole("SUPER_ADMIN");
+
+  const trimmedTitle = title.trim();
+  const trimmedBody = body.trim();
+  if (!trimmedTitle || !trimmedBody) return { error: "Completá el título y el mensaje." };
+  if (trimmedTitle.length > 60) return { error: "El título es muy largo (máximo 60 caracteres)." };
+  if (trimmedBody.length > 200) return { error: "El mensaje es muy largo (máximo 200 caracteres)." };
+
+  const { recipientCount } = await sendAnnouncement({ title: trimmedTitle, body: trimmedBody, tierId });
+
+  await recordAuditLog({
+    actorId: actor.id,
+    action: "ANNOUNCEMENT_SENT",
+    entityType: "Notification",
+    changes: { title: trimmedTitle, body: trimmedBody, tierId, recipientCount },
+  });
+
+  return { success: true, recipientCount };
 }
 
 // ── Manual reward grants (admin gifts a benefit without spending points) ──

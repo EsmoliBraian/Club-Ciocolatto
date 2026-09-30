@@ -13,14 +13,25 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const userName = `${session.user.firstName} ${session.user.lastName}`;
-  const userRole = session.user.role === "SUPER_ADMIN" ? "Super Admin" : "Admin";
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const userRole = isSuperAdmin ? "Super Admin" : "Admin";
   const pendingSolicitudesCount = await countPendingClaims();
 
   return (
     <div className="flex min-h-full flex-1 bg-background">
-      <AdminSidebar userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
+      <AdminSidebar
+        userName={userName}
+        userRole={userRole}
+        pendingSolicitudesCount={pendingSolicitudesCount}
+        isSuperAdmin={isSuperAdmin}
+      />
       <div className="flex flex-1 flex-col">
-        <AdminHeader userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
+        <AdminHeader
+          userName={userName}
+          userRole={userRole}
+          pendingSolicitudesCount={pendingSolicitudesCount}
+          isSuperAdmin={isSuperAdmin}
+        />
         <main className="flex-1 overflow-x-hidden px-4 py-6 sm:px-6">{children}</main>
       </div>
     </div>

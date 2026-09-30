@@ -116,6 +116,7 @@ enum NotificationType {
   ANNIVERSARY
   WINBACK
   POINTS_EXPIRING
+  ANNOUNCEMENT
 }
 
 enum NotificationChannel {

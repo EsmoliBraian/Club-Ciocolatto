@@ -12,10 +12,12 @@ export function AdminMobileNav({
   userName,
   userRole,
   pendingSolicitudesCount,
+  isSuperAdmin,
 }: {
   userName: string;
   userRole: string;
   pendingSolicitudesCount?: number;
+  isSuperAdmin?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -46,7 +48,11 @@ export function AdminMobileNav({
           <p className="truncate text-sm font-semibold text-foreground">{userName}</p>
           <p className="text-xs text-muted-foreground">{userRole}</p>
         </div>
-        <AdminNavLinks onNavigate={() => setOpen(false)} pendingSolicitudesCount={pendingSolicitudesCount} />
+        <AdminNavLinks
+          onNavigate={() => setOpen(false)}
+          pendingSolicitudesCount={pendingSolicitudesCount}
+          isSuperAdmin={isSuperAdmin}
+        />
         <div className="border-t border-border pt-2">
           <LogoutMenuRow variant="light" />
         </div>

@@ -82,6 +82,39 @@ export async function notify(input: NotifyInput, db: Db = prisma) {
   return notification;
 }
 
+/** Broadcasts a message to every customer, or just those in one tier. Writes
+ * one Notification row per recipient (so it shows up in their activity feed
+ * like anything else) and fans out push the same way `notify()` does. */
+export async function sendAnnouncement(
+  params: { title: string; body: string; tierId?: string | null },
+  db: Db = prisma
+): Promise<{ recipientCount: number }> {
+  const recipients = await db.user.findMany({
+    where: {
+      role: "CUSTOMER",
+      ...(params.tierId ? { customerProfile: { tierId: params.tierId } } : {}),
+    },
+    select: { id: true },
+  });
+  if (recipients.length === 0) return { recipientCount: 0 };
+
+  await db.notification.createMany({
+    data: recipients.map((r) => ({
+      userId: r.id,
+      type: "ANNOUNCEMENT" as const,
+      channel: "IN_APP" as const,
+      title: params.title,
+      body: params.body,
+    })),
+  });
+
+  await Promise.all(
+    recipients.map((r) => pushToUser(r.id, { title: params.title, body: params.body, url: "/actividad" }, db))
+  );
+
+  return { recipientCount: recipients.length };
+}
+
 export async function listRecentNotifications(userId: string, limit = 50, db: Db = prisma) {
   return db.notification.findMany({
     where: { userId },

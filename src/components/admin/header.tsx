@@ -29,10 +29,12 @@ export function AdminHeader({
   userName,
   userRole,
   pendingSolicitudesCount,
+  isSuperAdmin,
 }: {
   userName: string;
   userRole: string;
   pendingSolicitudesCount?: number;
+  isSuperAdmin?: boolean;
 }) {
   const { section, isDetail } = useBreadcrumb();
   const router = useRouter();
@@ -51,7 +53,12 @@ export function AdminHeader({
 
   return (
     <header className="flex items-center gap-3 border-b border-border bg-card px-4 py-3 sm:px-6">
-      <AdminMobileNav userName={userName} userRole={userRole} pendingSolicitudesCount={pendingSolicitudesCount} />
+      <AdminMobileNav
+        userName={userName}
+        userRole={userRole}
+        pendingSolicitudesCount={pendingSolicitudesCount}
+        isSuperAdmin={isSuperAdmin}
+      />
 
       <nav className="hidden items-center gap-1.5 text-sm text-muted-foreground sm:flex">
         <Link href="/admin" className="hover:text-foreground">
