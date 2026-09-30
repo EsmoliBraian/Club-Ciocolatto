@@ -1,9 +1,11 @@
 import { ImageResponse } from "next/og";
+import { loadGoogleFont } from "@/lib/og-font";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-export default function Icon() {
+export default async function Icon() {
+  const fontData = await loadGoogleFont("Lobster", "C");
   return new ImageResponse(
     (
       <div
@@ -13,17 +15,14 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#1c4328",
-          borderRadius: 6,
-          color: "#faf3e4",
-          fontSize: 20,
-          fontWeight: 700,
-          fontFamily: "Georgia, serif",
+          color: "#1c4328",
+          fontSize: 26,
+          fontFamily: "Lobster",
         }}
       >
         C
       </div>
     ),
-    size
+    { ...size, fonts: [{ name: "Lobster", data: fontData, style: "normal", weight: 400 }] }
   );
 }

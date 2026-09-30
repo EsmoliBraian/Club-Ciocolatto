@@ -71,7 +71,9 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
             <Label htmlFor="referralDuoMilestoneTierId">Nivel del bono dúo</Label>
             <Select name="referralDuoMilestoneTierId" defaultValue={config.referralDuoMilestoneTierId ?? undefined}>
               <SelectTrigger id="referralDuoMilestoneTierId" className="w-full">
-                <SelectValue placeholder="Sin nivel (desactivado)" />
+                <SelectValue placeholder="Sin nivel (desactivado)">
+                  {(value: string | null) => (value ? tiers.find((t) => t.id === value)?.name ?? value : "Sin nivel (desactivado)")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {tiers.map((t) => (
@@ -95,7 +97,9 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
             <Label htmlFor="winbackMinimumTierId">Nivel mínimo</Label>
             <Select name="winbackMinimumTierId" defaultValue={config.winbackMinimumTierId ?? undefined}>
               <SelectTrigger id="winbackMinimumTierId" className="w-full">
-                <SelectValue placeholder="Sin nivel (desactivado)" />
+                <SelectValue placeholder="Sin nivel (desactivado)">
+                  {(value: string | null) => (value ? tiers.find((t) => t.id === value)?.name ?? value : "Sin nivel (desactivado)")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {tiers.map((t) => (

@@ -1,13 +1,14 @@
 /** Options offered at registration / in "Mis datos" for the customer's favorite drink. */
 export const FAVORITE_DRINK_OPTIONS = [
-  "Café",
-  "Café con leche",
-  "Cappuccino",
-  "Latte",
   "Espresso",
+  "Café con leche",
+  "Cortado",
+  "Latte saborizado",
+  "Cappuccino",
+  "Cappuccino especial",
   "Té",
-  "Chocolate caliente",
-  "Otra",
+  "Café frío",
+  "Otro",
 ] as const;
 
 /** Stable id of the seeded, hidden "birthday coffee" Reward — granted automatically, never listed in the store. */

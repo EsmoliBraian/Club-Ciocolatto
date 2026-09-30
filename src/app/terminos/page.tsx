@@ -14,7 +14,7 @@ export default function TermsPage() {
       </Link>
 
       <div>
-        <p className="font-logo text-lg font-semibold text-primary italic">Ciocolatto</p>
+        <p className="font-logo text-lg font-semibold text-primary">ciocolatto</p>
         <h1 className="mt-1 font-heading text-2xl font-semibold text-foreground">Términos y Condiciones</h1>
         <p className="mt-1 text-sm text-muted-foreground">Club Ciocolatto — programa de fidelización</p>
       </div>

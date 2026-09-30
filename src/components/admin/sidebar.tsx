@@ -64,10 +64,10 @@ export function AdminNavLinks({ onNavigate }: { onNavigate?: () => void }) {
 function BrandMark() {
   return (
     <Link href="/admin" className="mb-1 flex items-center gap-2 px-2">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cc-green-800 font-logo text-sm text-cc-cream-50 italic">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-cc-green-800 font-logo text-sm text-cc-cream-50">
         C
       </span>
-      <span className="font-logo text-lg text-foreground italic">Ciocolatto</span>
+      <span className="font-logo text-lg text-foreground">ciocolatto</span>
     </Link>
   );
 }

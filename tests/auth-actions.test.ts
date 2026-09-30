@@ -37,7 +37,7 @@ describe("auth-actions: registerAction", () => {
     formData.set("phone", `+549action${suffix}`);
     formData.set("password", "Test1234!");
     formData.set("birthDate", "1995-01-01");
-    formData.set("favoriteDrink", "Latte");
+    formData.set("favoriteDrink", "Cappuccino");
     formData.set("acceptedTerms", "on");
     formData.set("acceptedMarketing", "on");
     formData.set("referralCode", "");
@@ -59,7 +59,7 @@ describe("auth-actions: registerAction", () => {
     // The real signal: validation must have let registerCustomer run at all.
     const created = await prisma.user.findUnique({ where: { email } });
     expect(created).not.toBeNull();
-    expect(created?.favoriteDrink).toBe("Latte");
+    expect(created?.favoriteDrink).toBe("Cappuccino");
 
     if (created) await cleanupTestCustomer(created.id);
   });
@@ -73,7 +73,7 @@ describe("auth-actions: registerAction", () => {
     formData.set("phone", `+549sticky${suffix}`);
     formData.set("password", "weak"); // fails the password policy on purpose
     formData.set("birthDate", "1995-01-01");
-    formData.set("favoriteDrink", "Latte");
+    formData.set("favoriteDrink", "Cappuccino");
     formData.set("acceptedTerms", "on");
     formData.set("acceptedMarketing", "on");
     formData.set("referralCode", "");
@@ -87,7 +87,7 @@ describe("auth-actions: registerAction", () => {
       email: `sticky-${suffix}@example.com`,
       phone: `+549sticky${suffix}`,
       birthDate: "1995-01-01",
-      favoriteDrink: "Latte",
+      favoriteDrink: "Cappuccino",
       acceptedTerms: true,
       acceptedMarketing: true,
     });
@@ -118,7 +118,7 @@ describe("auth-actions: registerAction", () => {
       formData.set("phone", `+549newphone${suffix}`);
       formData.set("password", "Test1234!");
       formData.set("birthDate", "1995-01-01");
-      formData.set("favoriteDrink", "Latte");
+      formData.set("favoriteDrink", "Cappuccino");
       formData.set("acceptedTerms", "on");
       formData.set("acceptedMarketing", "on");
       formData.set("referralCode", "");

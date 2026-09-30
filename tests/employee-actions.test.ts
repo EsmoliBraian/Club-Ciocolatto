@@ -42,7 +42,7 @@ describe("employee-actions: validateRedemptionAction", () => {
     async () => {
       const { user, profile } = await createTestCustomer();
       try {
-        await prisma.user.update({ where: { id: user.id }, data: { favoriteDrink: "Latte" } });
+        await prisma.user.update({ where: { id: user.id }, data: { favoriteDrink: "Cappuccino" } });
         await prisma.customerProfile.update({ where: { id: profile.id }, data: { pointsBalance: 1000 } });
 
         const cafe = await prisma.reward.findUniqueOrThrow({ where: { id: "seed-reward-cafe" } });

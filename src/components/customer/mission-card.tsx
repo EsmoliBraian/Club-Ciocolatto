@@ -42,7 +42,7 @@ export function MissionCard({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate font-medium text-cc-green-900">{title}</p>
+          <p className="truncate font-medium text-foreground">{title}</p>
           {completed && (
             <Badge className="bg-cc-gold-400 text-cc-green-900">Completa</Badge>
           )}
@@ -55,7 +55,7 @@ export function MissionCard({
           </span>
         </div>
       </div>
-      <span className="shrink-0 text-sm font-semibold text-cc-green-700">+{rewardPoints}</span>
+      <span className="shrink-0 text-sm font-semibold text-primary">+{rewardPoints}</span>
     </div>
   );
 }

@@ -48,7 +48,7 @@ export default async function PromotionsPage() {
                 key={promo.id}
                 className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4"
               >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-cc-green-soft/25 text-cc-green-800">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
                   <Icon className="size-5" />
                 </span>
                 <div className="min-w-0 flex-1">

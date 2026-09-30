@@ -13,10 +13,12 @@ export default async function QrPage() {
   const profile = await getCustomerProfileByUserId(session!.user.id);
   if (!profile) return null;
 
+  // Solid white/black, never theme-dependent — a QR code needs strong,
+  // guaranteed contrast to scan reliably regardless of light/dark mode.
   const qrDataUrl = await QRCode.toDataURL(profile.qrToken, {
     margin: 1,
     width: 320,
-    color: { dark: "#1c4328", light: "#00000000" },
+    color: { dark: "#000000", light: "#ffffff" },
   });
   const walletUrl = buildSaveToWalletUrl(profile, profile.tier);
 
@@ -31,8 +33,10 @@ export default async function QrPage() {
 
       <div className="w-full max-w-xs rounded-3xl border border-border bg-card p-6 shadow-[0_12px_32px_rgba(30,40,34,0.12)]">
         <div className="flex flex-col items-center gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qrDataUrl} alt="Tu código QR de Club Ciocolatto" className="size-56 rounded-xl" />
+          <div className="rounded-xl bg-white p-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrDataUrl} alt="Tu código QR de Club Ciocolatto" className="size-52" />
+          </div>
           <div>
             <p className="font-heading text-lg font-semibold text-foreground">
               {profile.user.firstName} {profile.user.lastName}

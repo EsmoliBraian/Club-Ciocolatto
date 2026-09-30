@@ -24,14 +24,14 @@ export function AdminMobileNav({ userName, userRole }: { userName: string; userR
               <Link
                 href="/admin"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 font-logo text-lg text-foreground italic"
+                className="flex items-center gap-2 font-logo text-lg text-foreground"
               />
             }
           >
-            <span className="flex size-7 items-center justify-center rounded-full bg-cc-green-800 text-xs text-cc-cream-50 not-italic">
+            <span className="flex size-7 items-center justify-center rounded-full bg-cc-green-800 text-xs text-cc-cream-50">
               C
             </span>
-            Ciocolatto
+            ciocolatto
           </SheetTitle>
         </SheetHeader>
         <div className="px-2">

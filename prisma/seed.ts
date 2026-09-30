@@ -422,7 +422,7 @@ async function main() {
         lastName: "Demo",
         phone: "+5491100000000",
         birthDate: new Date(Date.UTC(1995, 4, 20)),
-        favoriteDrink: "Latte",
+        favoriteDrink: "Cappuccino",
         active: true,
       },
     });

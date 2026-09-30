@@ -21,12 +21,12 @@ function NavIcon({ href, label, icon: Icon, active }: { href: string; label: str
       <span
         className={cn(
           "flex size-9 items-center justify-center rounded-full transition-colors",
-          active ? "bg-cc-green-800 text-cc-cream-50" : "text-cc-green-800/50"
+          active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
         )}
       >
         <Icon className="size-[18px]" />
       </span>
-      <span className={cn("text-[10px] font-medium", active ? "text-cc-green-800" : "text-cc-green-800/40")}>
+      <span className={cn("text-[10px] font-medium", active ? "text-primary" : "text-muted-foreground")}>
         {label}
       </span>
     </Link>
@@ -45,9 +45,9 @@ export function BottomNav() {
 
         <Link
           href={QR_ITEM.href}
-          className="relative -top-5 mx-1 flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-cc-green-800 text-cc-cream-50 ring-4 ring-background transition-transform active:scale-95"
+          className="relative -top-5 mx-1 flex size-16 shrink-0 flex-col items-center justify-center rounded-full bg-primary text-primary-foreground ring-4 ring-background transition-transform active:scale-95"
         >
-          <QrCode className="size-6 text-cc-gold-400" />
+          <QrCode className="size-6" />
           <span className="mt-0.5 text-[9px] font-semibold tracking-wide">QR</span>
         </Link>
 
@@ -66,8 +66,8 @@ export function DesktopNav() {
   return (
     <nav className="hidden border-b border-border bg-card sm:block">
       <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-3">
-        <Link href="/inicio" className="font-logo text-lg font-semibold text-foreground italic">
-          Club Ciocolatto
+        <Link href="/inicio" className="font-logo text-lg font-semibold text-foreground">
+          ciocolatto
         </Link>
         <ul className="flex items-center gap-1">
           {items.map((item) => {

@@ -77,7 +77,7 @@ export function MissionFormDialog({ mission, products }: { mission?: Mission; pr
             <Label htmlFor="type">Tipo</Label>
             <Select name="type" defaultValue={type} onValueChange={(v) => setType(v as typeof type)}>
               <SelectTrigger id="type" className="w-full">
-                <SelectValue />
+                <SelectValue>{(value: string) => TYPE_LABELS[value] ?? value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(TYPE_LABELS).map(([value, label]) => (
@@ -93,7 +93,9 @@ export function MissionFormDialog({ mission, products }: { mission?: Mission; pr
               <Label htmlFor="productId">Producto</Label>
               <Select name="productId" defaultValue={mission?.productId ?? undefined}>
                 <SelectTrigger id="productId" className="w-full">
-                  <SelectValue placeholder="Elegí un producto" />
+                  <SelectValue placeholder="Elegí un producto">
+                    {(value: string | null) => (value ? products.find((p) => p.id === value)?.name ?? value : "Elegí un producto")}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {products.map((p) => (

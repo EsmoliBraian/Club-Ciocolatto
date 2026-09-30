@@ -97,7 +97,9 @@ export default async function CustomersAdminPage({
         <Input name="q" defaultValue={q} placeholder="Buscar cliente..." className="max-w-xs" />
         <Select name="tier" defaultValue={tierSlug ?? "all"}>
           <SelectTrigger className="w-44">
-            <SelectValue placeholder="Nivel" />
+            <SelectValue placeholder="Nivel">
+              {(value: string) => (value === "all" ? "Todos" : tiers.find((t) => t.slug === value)?.name ?? value)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>

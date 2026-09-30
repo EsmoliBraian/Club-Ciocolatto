@@ -102,7 +102,7 @@ export default async function CustomerHomePage() {
               <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Beneficio disponible
               </p>
-              <p className="font-heading font-semibold text-cc-green-900">{nextBenefit.reward.name}</p>
+              <p className="font-heading font-semibold text-foreground">{nextBenefit.reward.name}</p>
               <p className="text-xs font-semibold text-cc-gold-400">
                 {nextBenefit.eligible ? "GRATIS" : `${nextBenefit.reward.pointsCost} pts`}
               </p>

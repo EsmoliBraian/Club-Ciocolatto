@@ -32,7 +32,7 @@ describe("customer-service: claimBirthdayReward", () => {
   it("rejects claiming outside the birthday window", async () => {
     const farBirthday = new Date();
     farBirthday.setUTCMonth((farBirthday.getUTCMonth() + 6) % 12);
-    await prisma.user.update({ where: { id: userId }, data: { birthDate: farBirthday, favoriteDrink: "Latte" } });
+    await prisma.user.update({ where: { id: userId }, data: { birthDate: farBirthday, favoriteDrink: "Cappuccino" } });
 
     await expect(claimBirthdayReward(profileId)).rejects.toMatchObject({ code: "BIRTHDAY_WINDOW_CLOSED" });
   });
@@ -132,7 +132,7 @@ describe("customer-service: checkAndAwardProfileCompletion", () => {
   it("awards the bonus exactly once, the moment every field is filled in", async () => {
     await prisma.user.update({
       where: { id: userId },
-      data: { phone: `+549complete${randomUUID().slice(0, 6)}`, birthDate: new Date("1995-01-01"), favoriteDrink: "Latte", avatarUrl: "https://example.com/a.png" },
+      data: { phone: `+549complete${randomUUID().slice(0, 6)}`, birthDate: new Date("1995-01-01"), favoriteDrink: "Cappuccino", avatarUrl: "https://example.com/a.png" },
     });
 
     await checkAndAwardProfileCompletion(userId);
@@ -159,7 +159,7 @@ describe("customer-service: registerCustomer referral handling", () => {
       phone: `+549nueva${suffix}`,
       password: "Test1234!",
       birthDate: new Date("1995-01-01"),
-      favoriteDrink: "Latte",
+      favoriteDrink: "Cappuccino",
       acceptedTerms: true,
       acceptedMarketing: false,
       ...overrides,

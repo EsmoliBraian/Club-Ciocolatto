@@ -34,8 +34,8 @@ export default function WelcomePage() {
       <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col items-center">
         <div className="flex flex-col items-center gap-1.5">
           <Leaf className="size-7" style={{ color: VIP_GOLD }} />
-          <p className="font-logo text-3xl font-semibold italic" style={{ color: VIP_GOLD }}>
-            Ciocolatto
+          <p className="font-logo text-3xl font-semibold" style={{ color: VIP_GOLD }}>
+            ciocolatto
           </p>
           <p className="text-xs font-semibold tracking-[0.25em]" style={{ color: VIP_TEXT_MUTED }}>
             VIP CLUB

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Trophy } from "lucide-react";
+import Link from "next/link";
+import { Trophy, QrCode } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
@@ -27,6 +28,19 @@ export default async function MissionsPage() {
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 pt-6">
       <h1 className="font-heading text-xl font-semibold text-foreground">Misiones</h1>
+
+      <Link
+        href="/qr"
+        className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm transition-colors hover:bg-secondary/50"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
+          <QrCode className="size-5" />
+        </span>
+        <p className="text-sm text-foreground">
+          <span className="font-semibold">La forma más simple de sumar puntos:</span> mostrá tu QR en el local cada vez
+          que hacés una compra. Sumás puntos equivalentes al monto que gastás, además de lo que ganes en misiones.
+        </p>
+      </Link>
 
       {all.length === 0 ? (
         <EmptyState />

@@ -68,7 +68,7 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
             <Label htmlFor="category">Categoría</Label>
             <Select name="category" defaultValue={reward?.category ?? "PRODUCT"}>
               <SelectTrigger id="category" className="w-full">
-                <SelectValue />
+                <SelectValue>{(value: string) => (value === "PRODUCT" ? "Producto" : "Descuento")}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="PRODUCT">Producto</SelectItem>
@@ -80,7 +80,9 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
             <Label htmlFor="requiredTierId">Nivel requerido</Label>
             <Select name="requiredTierId" defaultValue={reward?.requiredTierId ?? undefined}>
               <SelectTrigger id="requiredTierId" className="w-full">
-                <SelectValue placeholder="Sin restricción" />
+                <SelectValue placeholder="Sin restricción">
+                  {(value: string | null) => (value ? tiers.find((t) => t.id === value)?.name ?? value : "Sin restricción")}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {tiers.map((t) => (

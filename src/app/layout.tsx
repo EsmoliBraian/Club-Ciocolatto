@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import { Lobster, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthSessionProvider } from "@/components/shared/session-provider";
@@ -15,13 +15,15 @@ const plexSans = IBM_Plex_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-// Reserved for the "Ciocolatto" wordmark only (via the `font-logo` utility) —
+// Reserved for the "ciocolatto" wordmark only (via the `font-logo` utility) —
 // not used for regular headings, so the brand mark stays distinctive instead
-// of making every heading in the app look like the logo.
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+// of making every heading in the app look like the logo. Lobster is a free
+// stand-in for the brand's actual TAN Nimbus font, which is licensed for
+// design tools (Canva) but not confirmed licensed for web embedding.
+const lobster = Lobster({
+  variable: "--font-lobster",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  weight: ["400"],
 });
 
 export const metadata: Metadata = {
@@ -67,7 +69,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${plexSans.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${plexSans.variable} ${lobster.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>

@@ -79,7 +79,7 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
             <Label htmlFor="type">Tipo</Label>
             <Select name="type" defaultValue={type} onValueChange={(v) => setType(v as typeof type)}>
               <SelectTrigger id="type" className="w-full">
-                <SelectValue />
+                <SelectValue>{(value: string) => TYPE_LABELS[value] ?? value}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(TYPE_LABELS).map(([value, label]) => (

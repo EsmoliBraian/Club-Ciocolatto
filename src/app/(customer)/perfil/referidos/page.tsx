@@ -22,20 +22,20 @@ export default async function ReferralsPage() {
       <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5">
         <p className="text-sm text-muted-foreground">Compartí Ciocolatto y ganen puntos juntos.</p>
         <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-2.5">
-          <span className="font-heading font-semibold tracking-wide text-cc-green-900">{profile.referralCode}</span>
+          <span className="font-heading font-semibold tracking-wide text-primary">{profile.referralCode}</span>
         </div>
         <ShareReferral code={profile.referralCode} appUrl={appUrl} />
         <div className="grid grid-cols-3 gap-2 pt-1 text-center">
           <div>
-            <p className="font-heading text-lg font-bold text-cc-green-900">{stats.invited}</p>
+            <p className="font-heading text-lg font-bold text-primary">{stats.invited}</p>
             <p className="text-xs text-muted-foreground">Invitados</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-cc-green-900">{stats.completed}</p>
+            <p className="font-heading text-lg font-bold text-primary">{stats.completed}</p>
             <p className="text-xs text-muted-foreground">Compras</p>
           </div>
           <div>
-            <p className="font-heading text-lg font-bold text-cc-green-900">{stats.pointsEarned}</p>
+            <p className="font-heading text-lg font-bold text-primary">{stats.pointsEarned}</p>
             <p className="text-xs text-muted-foreground">Puntos ganados</p>
           </div>
         </div>
