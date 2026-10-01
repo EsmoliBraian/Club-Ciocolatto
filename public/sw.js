@@ -3,7 +3,7 @@
 // without a version bump a stale cache can persist indefinitely on a device
 // (this exact bug: someone re-adding the home-screen icon kept seeing an old
 // build because nothing ever told the old cache to clear).
-const CACHE_NAME = "club-ciocolatto-v2";
+const CACHE_NAME = "club-ciocolatto-v3";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
