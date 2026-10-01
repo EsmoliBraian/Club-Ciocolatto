@@ -38,7 +38,7 @@ export default async function MissionsPage() {
         </span>
         <p className="text-sm text-foreground">
           <span className="font-semibold">La forma más simple de sumar puntos:</span> mostrá tu QR en el local cada vez
-          que hacés una compra. Sumás puntos equivalentes al monto que gastás, además de lo que ganes en misiones.
+          que hacés una compra. Sumás puntos por lo que gastás, además de lo que ganes en misiones.
         </p>
       </Link>
 

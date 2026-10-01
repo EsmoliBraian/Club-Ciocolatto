@@ -6,8 +6,10 @@ import { listRewardsForCustomer, type RewardEligibility } from "@/server/service
 import { formatDate } from "@/lib/format";
 import { BrandIcon } from "@/components/shared/brand-icon";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RedeemButton } from "@/components/customer/redeem-button";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Canjear" };
 
@@ -17,6 +19,7 @@ const REASON_LABEL: Record<string, string> = {
   TIER_REQUIRED: "Requiere más nivel",
   LIMIT_REACHED: "Límite alcanzado",
   COOLDOWN_ACTIVE: "Ya lo canjeaste",
+  VISITS_REQUIRED: "Te faltan visitas",
 };
 
 export default async function RedeemPage() {
@@ -69,10 +72,13 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {items.map(({ reward, eligible, reason, availableAgainAt }) => (
+      {items.map(({ reward, eligible, reason, availableAgainAt, visitsSoFar }) => (
         <div
           key={reward.id}
-          className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm"
+          className={cn(
+            "flex flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-sm",
+            reason === "VISITS_REQUIRED" && "opacity-70"
+          )}
         >
           <BrandIcon emoji={reward.icon ?? "🎁"} size={28} className="text-foreground" />
           <div className="min-h-8">
@@ -82,6 +88,14 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
             )}
           </div>
           <p className="text-xs font-semibold text-muted-foreground">{reward.pointsCost} pts</p>
+          {reason === "VISITS_REQUIRED" && reward.minimumVisits != null && (
+            <div className="flex flex-col gap-1">
+              <Progress value={((visitsSoFar ?? 0) / reward.minimumVisits) * 100} />
+              <p className="text-[11px] text-muted-foreground">
+                Se desbloquea con {reward.minimumVisits} visitas. Llevás {visitsSoFar ?? 0} de {reward.minimumVisits}.
+              </p>
+            </div>
+          )}
           {eligible ? (
             <RedeemButton
               rewardId={reward.id}
@@ -96,7 +110,7 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
               {reason === "COOLDOWN_ACTIVE" && availableAgainAt
                 ? `Disponible el ${formatDate(availableAgainAt)}`
                 : reason
-                  ? REASON_LABEL[reason]
+                  ? (REASON_LABEL[reason] ?? "No disponible")
                   : "No disponible"}
             </Button>
           )}
