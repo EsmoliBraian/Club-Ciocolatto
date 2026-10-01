@@ -98,6 +98,16 @@ export async function registerCustomer(input: RegisterInput) {
         refereeProfileId: profile.id,
         codeUsed: input.referralCode!.trim().toUpperCase(),
       });
+
+      await notify(
+        {
+          userId: referrer.userId,
+          type: "GENERAL",
+          title: "¡Un amigo se unió con tu código! 🎉",
+          body: `${input.firstName} ya es parte del Club — cuando haga su primera compra, vas a sumar puntos.`,
+        },
+        tx
+      );
     }
 
     if (config.registrationPoints > 0) {

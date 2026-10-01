@@ -124,7 +124,10 @@ export async function completeReferralOnFirstPurchase(db: Db, refereeProfileId: 
       userId: referrerProfile.user.id,
       type: "REFERRAL_COMPLETED",
       title: "¡Tu amigo hizo su primera compra! 🎉",
-      body: `Sumaste ${referrerPoints} puntos por invitarlo.`,
+      body:
+        referrerPoints > 0
+          ? `Sumaste ${referrerPoints} puntos por invitarlo.`
+          : "Gracias por invitarlo al Club Ciocolatto.",
     },
     db
   );

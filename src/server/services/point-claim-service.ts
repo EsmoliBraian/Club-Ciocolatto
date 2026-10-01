@@ -91,7 +91,7 @@ export async function approvePointClaim(
       userId: claim.customerProfile.userId,
       type: "GENERAL",
       title: "Tu solicitud fue aprobada 🎉",
-      body: `Sumaste ${params.pointsAwarded} puntos.`,
+      body: params.pointsAwarded > 0 ? `Sumaste ${params.pointsAwarded} puntos.` : "Gracias por compartirlo con nosotros.",
     },
     db
   );
