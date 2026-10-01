@@ -5,6 +5,7 @@ import {
   listActivePromotionsForCustomer,
   listUpcomingPromotionsForCustomer,
 } from "@/server/services/promotion-service";
+import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Promociones" };
 
@@ -55,7 +56,7 @@ export default async function PromotionsPage() {
                 className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
-                  <Icon className="size-5" />
+                  {promo.icon ? <BrandIcon emoji={promo.icon} size={20} /> : <Icon className="size-5" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-heading font-semibold text-foreground">{promo.name}</p>
@@ -95,7 +96,7 @@ export default async function PromotionsPage() {
                 className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-4 opacity-80"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
-                  <Icon className="size-5" />
+                  {promo.icon ? <BrandIcon emoji={promo.icon} size={20} /> : <Icon className="size-5" />}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-heading font-semibold text-foreground">{promo.name}</p>

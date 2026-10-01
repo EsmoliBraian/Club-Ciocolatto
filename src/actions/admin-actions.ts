@@ -315,6 +315,7 @@ export async function savePromotionAction(_prev: ActionState, formData: FormData
   const parsed = promotionSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
+    icon: optionalString(formData, "icon"),
     type: formData.get("type"),
     multiplier: optionalString(formData, "multiplier"),
     bonusPoints: optionalString(formData, "bonusPoints"),

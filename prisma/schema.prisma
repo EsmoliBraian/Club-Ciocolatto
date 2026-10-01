@@ -450,6 +450,7 @@ model Promotion {
   id          String        @id @default(cuid())
   name        String
   description String?
+  icon        String? // emoji key into BRAND_ICON_OPTIONS — shown on the home banner and /promociones instead of the generic per-type icon
   type        PromotionType
   multiplier  Decimal?      @db.Decimal(4, 2) // POINTS_MULTIPLIER
   bonusPoints Int? // BONUS_POINTS

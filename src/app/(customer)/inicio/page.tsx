@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Coffee, Megaphone, Sparkles, ChevronRight } from "lucide-react";
+import { Coffee, Megaphone, ChevronRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import {
   getCustomerProfileByUserId,
@@ -14,6 +14,7 @@ import { getSurveyStateForCustomer } from "@/server/services/survey-service";
 import { countUnreadNotifications } from "@/server/services/notification-service";
 import { listActivePromotionsForCustomer, listUpcomingPromotionsForCustomer } from "@/server/services/promotion-service";
 import { NotificationsButton } from "@/components/customer/notifications-button";
+import { BrandIcon } from "@/components/shared/brand-icon";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
@@ -123,7 +124,7 @@ export default async function CustomerHomePage() {
           className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-sm transition-colors hover:bg-primary/15"
         >
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Sparkles className="size-5" />
+            <BrandIcon emoji={featuredPromo.icon ?? "🎉"} size={20} />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">

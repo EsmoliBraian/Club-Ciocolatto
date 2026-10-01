@@ -9,18 +9,38 @@ export function IconPicker({
   name,
   label = "Ícono",
   defaultValue,
+  allowNone = false,
 }: {
   name: string;
   label?: string;
   defaultValue?: string | null;
+  /** Adds a leading "Por defecto" tile that clears the selection — for optional
+   * icons (e.g. Promotion) where not picking one should fall back to other logic,
+   * instead of forcing the first option like Tier/Reward/Mission do. */
+  allowNone?: boolean;
 }) {
-  const [selected, setSelected] = useState(defaultValue ?? BRAND_ICON_OPTIONS[0].emoji);
+  const [selected, setSelected] = useState(defaultValue ?? (allowNone ? "" : BRAND_ICON_OPTIONS[0].emoji));
 
   return (
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
       <input type="hidden" name={name} value={selected} />
       <div className="grid grid-cols-5 gap-2">
+        {allowNone && (
+          <button
+            type="button"
+            title="Por defecto"
+            aria-pressed={selected === ""}
+            onClick={() => setSelected("")}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-xl border-2 py-2 text-[10px] text-muted-foreground transition-colors",
+              selected === "" ? "border-primary bg-secondary text-foreground" : "border-transparent hover:bg-secondary/50"
+            )}
+          >
+            <span className="flex size-[22px] items-center justify-center text-sm text-muted-foreground">—</span>
+            <span className="truncate">Por defecto</span>
+          </button>
+        )}
         {BRAND_ICON_OPTIONS.map(({ emoji, label: iconLabel, Icon }) => {
           const active = selected === emoji;
           return (

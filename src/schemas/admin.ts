@@ -82,6 +82,11 @@ export const promotionTypeEnum = z.enum(["POINTS_MULTIPLIER", "BONUS_POINTS", "D
 export const promotionSchema = z.object({
   name: z.string().trim().min(2),
   description: z.string().trim().optional(),
+  icon: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v ?? null), // explicit null (not undefined) so clearing it back to "default" actually clears the column on update
   type: promotionTypeEnum,
   multiplier: z.coerce.number().min(1).optional(),
   bonusPoints: z.coerce.number().int().min(0).optional(),

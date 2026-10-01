@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Field } from "@/components/admin/form-field";
+import { IconPicker } from "@/components/admin/icon-picker";
 import type { Promotion } from "@prisma/client";
 
 const initialState: ActionState = {};
@@ -71,6 +72,12 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
         <form action={submit} className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
           {promotion && <input type="hidden" name="id" value={promotion.id} />}
           <Field label="Nombre" name="name" defaultValue={promotion?.name} required />
+          <IconPicker
+            name="icon"
+            label="Ícono (se muestra en el inicio y en Promociones)"
+            defaultValue={promotion?.icon}
+            allowNone
+          />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" name="description" defaultValue={promotion?.description ?? undefined} rows={2} />

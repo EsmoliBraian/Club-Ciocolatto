@@ -11,6 +11,7 @@ import {
   Handshake,
   Target,
   Medal,
+  FlowerTulip,
 } from "@phosphor-icons/react/dist/ssr";
 import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 
@@ -34,6 +35,7 @@ export const BRAND_ICON_OPTIONS: { emoji: string; label: string; Icon: PhosphorI
   { emoji: "🤝", label: "Referido", Icon: Handshake },
   { emoji: "🎯", label: "Meta", Icon: Target },
   { emoji: "🏅", label: "Medalla", Icon: Medal },
+  { emoji: "🌷", label: "Flor", Icon: FlowerTulip },
 ];
 
 const EMOJI_ICON_MAP: Record<string, PhosphorIcon> = Object.fromEntries(
