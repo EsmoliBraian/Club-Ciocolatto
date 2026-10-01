@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerOrder } from "@/server/services/order-service";
@@ -8,6 +8,25 @@ import { redeemReward } from "@/server/services/reward-service";
 import { createReferral } from "@/server/services/referral-service";
 import { countQualifyingVisits } from "@/server/services/visit-service";
 import { createTestCustomer, cleanupTestCustomer } from "./helpers";
+
+// Every reglas-2026 behavior this file exercises (rolling tier window,
+// referral minimum, visit minimum, one-redemption-per-day) is gated behind
+// LoyaltyConfig.activationDate — deploying the code must NOT change live
+// behavior for real customers until an admin deliberately activates it (see
+// tier-service.ts / order-service.ts / reward-service.ts). So this suite
+// activates it for its own duration and restores the previous value after,
+// the same way it already does for individual config fields elsewhere.
+let previousActivationDate: Date | null = null;
+
+beforeAll(async () => {
+  const config = await prisma.loyaltyConfig.upsert({ where: { id: "singleton" }, update: {}, create: { id: "singleton" } });
+  previousActivationDate = config.activationDate;
+  await prisma.loyaltyConfig.update({ where: { id: "singleton" }, data: { activationDate: new Date("2020-01-01") } });
+});
+
+afterAll(async () => {
+  await prisma.loyaltyConfig.update({ where: { id: "singleton" }, data: { activationDate: previousActivationDate } });
+});
 
 // Fixed future dates (well after any real "now" this suite runs at, so they
 // fall inside seed-promo-dobles-mie-jue's 10-year window) — a known

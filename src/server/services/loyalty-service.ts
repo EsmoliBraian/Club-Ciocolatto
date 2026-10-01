@@ -84,7 +84,15 @@ export async function awardPoints(
     },
   });
 
-  const newTier = affectsTier ? await getEffectiveTier(profile, tiers, db) : null;
+  // OJO: pasa `{ ...profile, lifetimePoints: newLifetime }`, no `profile` tal
+  // cual — getEffectiveTier (cuando las reglas 2026 todavía no se activaron)
+  // cae a resolveTierForPoints(profile.lifetimePoints, tiers), y profile acá
+  // es el fetch de ANTES de esta transacción. Pasar el mismo objeto stale a
+  // las dos llamadas haría que previousTier y newTier salgan siempre iguales
+  // — nunca se detectaría un cambio de nivel.
+  const newTier = affectsTier
+    ? await getEffectiveTier({ ...profile, lifetimePoints: newLifetime }, tiers, db)
+    : null;
   const tierChanged = affectsTier && (previousTier?.tier?.id ?? null) !== (newTier?.tier?.id ?? null);
 
   await db.customerProfile.update({

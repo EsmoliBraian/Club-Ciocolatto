@@ -292,22 +292,27 @@ export async function markRedemptionUsed(
 
   const { reward } = redemption;
   const now = new Date();
+  const config = await getLoyaltyConfig(db);
 
   // Regla "un canje por visita" (reglas 2026): no se acumula con otro premio
-  // ni cupón usado el mismo día calendario (hora local de Buenos Aires).
-  const recentlyUsed = await db.rewardRedemption.findMany({
-    where: {
-      customerProfileId: redemption.customerProfileId,
-      status: "USED",
-      redeemedAt: { gte: new Date(now.getTime() - 2 * 86_400_000) },
-    },
-  });
-  const todayIndex = toBusinessDayIndex(now);
-  if (recentlyUsed.some((r) => r.redeemedAt && toBusinessDayIndex(r.redeemedAt) === todayIndex)) {
-    throw new RewardRedemptionError(
-      "ALREADY_REDEEMED_TODAY",
-      "Ya se usó un beneficio hoy en esta cuenta — un canje por visita."
-    );
+  // ni cupón usado el mismo día calendario (hora local de Buenos Aires). Solo
+  // rige una vez activadas las reglas nuevas — antes, el comportamiento es el
+  // mismo de siempre (sin este límite).
+  if (config.activationDate) {
+    const recentlyUsed = await db.rewardRedemption.findMany({
+      where: {
+        customerProfileId: redemption.customerProfileId,
+        status: "USED",
+        redeemedAt: { gte: new Date(now.getTime() - 2 * 86_400_000) },
+      },
+    });
+    const todayIndex = toBusinessDayIndex(now);
+    if (recentlyUsed.some((r) => r.redeemedAt && toBusinessDayIndex(r.redeemedAt) === todayIndex)) {
+      throw new RewardRedemptionError(
+        "ALREADY_REDEEMED_TODAY",
+        "Ya se usó un beneficio hoy en esta cuenta — un canje por visita."
+      );
+    }
   }
 
   if (reward.minimumPurchaseAmount != null) {

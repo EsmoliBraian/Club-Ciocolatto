@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { CustomerProfile, LoyaltyTier } from "@prisma/client";
 import { TIER_FREEZE_END, TIER_WINDOW_DAYS } from "@/lib/constants";
+import { getLoyaltyConfig } from "@/server/services/config-service";
 
 export async function listActiveTiers(db: Db = prisma): Promise<LoyaltyTier[]> {
   return db.loyaltyTier.findMany({
@@ -105,16 +106,26 @@ export interface EffectiveTierResult {
 
 /**
  * The tier that actually governs a customer's benefits right now.
- * - Existing customers (`legacyTierId` set at activation) keep that frozen tier until
- *   TIER_FREEZE_END, regardless of what their rolling purchases say.
- * - Everyone else (new customers from day one, or anyone once the freeze ends): the tier
- *   from `getRollingPurchasePoints` — this can go DOWN as old purchases fall out of the window.
+ * - Reglas 2026 not activated yet (`LoyaltyConfig.activationDate` still null): behaves exactly
+ *   like before this rebalance — resolved from `lifetimePoints`, no multiplier logic engaged
+ *   anywhere downstream. This is what keeps deploying this code a no-op for real customers
+ *   until an admin deliberately sets the activation date — never flip this check off.
+ * - Once activated, existing customers (`legacyTierId` snapshotted at that moment) keep that
+ *   frozen tier until TIER_FREEZE_END, regardless of what their rolling purchases say.
+ * - Everyone else (new customers from day one, or anyone once the freeze ends): the tier from
+ *   `getRollingPurchasePoints` — this can go DOWN as old purchases fall out of the window.
  */
 export async function getEffectiveTier(
-  profile: Pick<CustomerProfile, "id" | "legacyTierId">,
+  profile: Pick<CustomerProfile, "id" | "legacyTierId" | "lifetimePoints">,
   tiers: LoyaltyTier[],
   db: Db = prisma
 ): Promise<EffectiveTierResult> {
+  const config = await getLoyaltyConfig(db);
+  if (!config.activationDate) {
+    const tier = resolveTierForPoints(profile.lifetimePoints, tiers);
+    return { tier, frozen: false, rollingPoints: 0, progress: calculateTierProgress(profile.lifetimePoints, tiers) };
+  }
+
   if (profile.legacyTierId && Date.now() < TIER_FREEZE_END.getTime()) {
     const tier = tiers.find((t) => t.id === profile.legacyTierId) ?? null;
     return { tier, frozen: true, rollingPoints: 0, progress: calculateTierProgress(tier?.minimumPoints ?? 0, tiers) };

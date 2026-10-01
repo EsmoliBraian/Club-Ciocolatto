@@ -325,14 +325,19 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
 
     // "Visita" (reglas 2026) solo cuenta si la compra llega al mínimo
     // configurado — una compra chica no alimenta rachas ni box sorpresa.
-    if (totalAmount >= Number(config.visitMinimumAmount)) {
+    // Antes de activar las reglas nuevas (activationDate null), cualquier
+    // compra sigue contando, igual que hoy en producción.
+    const visitQualifies = config.activationDate ? totalAmount >= Number(config.visitMinimumAmount) : true;
+    if (visitQualifies) {
       await updateVisitStreak(tx, profile.id, order.createdAt);
     }
 
     // El referido solo se completa con una compra real de
     // referralMinPurchaseAmount o más — puede no ser la primera (sigue
-    // PENDING hasta que alguna compra la alcance).
-    if (totalAmount >= Number(config.referralMinPurchaseAmount)) {
+    // PENDING hasta que alguna compra la alcance). Antes de activar, no hay
+    // mínimo (se completa con cualquier compra, igual que hoy).
+    const referralMinimum = config.activationDate ? Number(config.referralMinPurchaseAmount) : 0;
+    if (totalAmount >= referralMinimum) {
       await completeReferralOnFirstPurchase(tx, profile.id);
     }
 
