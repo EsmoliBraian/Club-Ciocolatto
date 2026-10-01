@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveTierForPoints, resolveNextTier, calculateTierProgress } from "@/server/services/tier-service";
+import { Prisma } from "@prisma/client";
 import type { LoyaltyTier } from "@prisma/client";
 
 function fakeTier(overrides: Partial<LoyaltyTier>): LoyaltyTier {
@@ -11,6 +12,7 @@ function fakeTier(overrides: Partial<LoyaltyTier>): LoyaltyTier {
     maximumPoints: null,
     description: null,
     benefits: [],
+    earnMultiplier: new Prisma.Decimal(1),
     icon: null,
     color: null,
     displayOrder: 0,

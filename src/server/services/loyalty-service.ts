@@ -1,10 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { PointSource, PointTransaction, PointTransactionType, Prisma } from "@prisma/client";
-import { listActiveTiers, resolveTierForPoints } from "@/server/services/tier-service";
+import { listActiveTiers, getEffectiveTier } from "@/server/services/tier-service";
 import { notify } from "@/server/services/notification-service";
-import { getLoyaltyConfig } from "@/server/services/config-service";
-import type { LoyaltyTier } from "@prisma/client";
 
 export interface AwardPointsInput {
   customerProfileId: string;
@@ -57,10 +55,19 @@ export async function awardPoints(
     ? Math.max(0, profile.lifetimePoints + input.amount)
     : profile.lifetimePoints;
 
-  const tiers = await listActiveTiers(db);
-  const previousTier = resolveTierForPoints(profile.lifetimePoints, tiers);
-  const newTier = resolveTierForPoints(newLifetime, tiers);
-  const tierChanged = (previousTier?.id ?? null) !== (newTier?.id ?? null);
+  // "Saldo protegido" (reglas 2026): nunca vence, pero si el saldo baja por
+  // debajo de lo protegido (un canje, un ajuste negativo), se achica junto
+  // con él — así cualquier vencimiento futuro siempre gasta primero los
+  // puntos nuevos, nunca los protegidos.
+  const newProtectedBalance = Math.min(profile.protectedBalance, newBalance);
+
+  // El nivel ahora se basa en compras de los últimos 12 meses (o el nivel
+  // congelado para socios existentes) — ver tier-service.ts. Solo una
+  // compra puede moverlo, así que no vale la pena recalcularlo (ni pagar el
+  // query extra) para ningún otro tipo de movimiento.
+  const affectsTier = input.source === "PURCHASE" && (input.type === "EARN" || input.type === "REFUND");
+  const tiers = affectsTier ? await listActiveTiers(db) : [];
+  const previousTier = affectsTier ? await getEffectiveTier(profile, tiers, db) : null;
 
   const transaction = await db.pointTransaction.create({
     data: {
@@ -77,12 +84,16 @@ export async function awardPoints(
     },
   });
 
+  const newTier = affectsTier ? await getEffectiveTier(profile, tiers, db) : null;
+  const tierChanged = affectsTier && (previousTier?.tier?.id ?? null) !== (newTier?.tier?.id ?? null);
+
   await db.customerProfile.update({
     where: { id: input.customerProfileId },
     data: {
       pointsBalance: newBalance,
       lifetimePoints: newLifetime,
-      tierId: newTier?.id ?? null,
+      protectedBalance: newProtectedBalance,
+      ...(affectsTier ? { tierId: newTier?.tier?.id ?? null } : {}),
     },
   });
 
@@ -108,97 +119,31 @@ export async function awardPoints(
     );
   }
 
-  if (tierChanged && newTier) {
+  if (tierChanged && newTier?.tier) {
     await notify(
       {
         userId: profile.userId,
         type: "TIER_UPGRADED",
-        title: `¡Felicitaciones! Ahora sos ${newTier.name}`,
+        title: `¡Felicitaciones! Ahora sos ${newTier.tier.name}`,
         body: "Desbloqueaste nuevos beneficios.",
       },
       db
     );
-
-    const rank = tiers.findIndex((t) => t.id === newTier.id);
-    await maybeAwardReferralDuoBonus(db, input.customerProfileId, rank, tiers);
   }
 
   return {
     transaction,
     balanceAfter: newBalance,
     tierChanged,
-    previousTierId: previousTier?.id ?? null,
-    newTierId: newTier?.id ?? null,
+    previousTierId: previousTier?.tier?.id ?? null,
+    newTierId: newTier?.tier?.id ?? null,
   };
 }
 
-/**
- * One-time bonus for both sides of a completed referral once they're BOTH
- * simultaneously at-or-above the configured milestone tier (not re-paid on
- * every later tier crossing). Lives inside awardPoints() itself — the single
- * choke point every points change already passes through — rather than at
- * each of its call sites, and queries referral-service's tables directly to
- * avoid a circular import (referral-service.ts already imports awardPoints).
- */
-async function maybeAwardReferralDuoBonus(
-  db: Db,
-  customerProfileId: string,
-  rank: number,
-  tiers: LoyaltyTier[]
-): Promise<void> {
-  const config = await getLoyaltyConfig(db);
-  if (!config.referralDuoMilestoneTierId) return;
-  const milestoneRank = tiers.findIndex((t) => t.id === config.referralDuoMilestoneTierId);
-  if (milestoneRank === -1 || rank < milestoneRank) return;
-
-  const pendingReferrals = await db.referral.findMany({
-    where: {
-      status: "COMPLETED",
-      duoBonusPaidAt: null,
-      OR: [{ referrerId: customerProfileId }, { refereeId: customerProfileId }],
-    },
-  });
-
-  for (const referral of pendingReferrals) {
-    const otherId = referral.referrerId === customerProfileId ? referral.refereeId : referral.referrerId;
-    const other = await db.customerProfile.findUniqueOrThrow({ where: { id: otherId } });
-    const otherTier = resolveTierForPoints(other.lifetimePoints, tiers);
-    const otherRank = otherTier ? tiers.findIndex((t) => t.id === otherTier.id) : -1;
-    if (otherRank < milestoneRank) continue;
-
-    // Mark paid BEFORE the nested awardPoints calls below — if either of
-    // those itself crosses another tier and re-enters this function, the
-    // query above no longer finds this referral, so it can't double-pay.
-    await db.referral.update({ where: { id: referral.id }, data: { duoBonusPaidAt: new Date() } });
-
-    await awardPoints(
-      {
-        customerProfileId: referral.referrerId,
-        type: "BONUS",
-        source: "REFERRAL_DUO",
-        amount: config.referralDuoBonusPoints,
-        description: "Bono dúo de referidos 🎊",
-        referenceType: "Referral",
-        referenceId: referral.id,
-      },
-      db
-    );
-    await awardPoints(
-      {
-        customerProfileId: referral.refereeId,
-        type: "BONUS",
-        source: "REFERRAL_DUO",
-        amount: config.referralDuoBonusPoints,
-        description: "Bono dúo de referidos 🎊",
-        referenceType: "Referral",
-        referenceId: referral.id,
-      },
-      db
-    );
-  }
-}
-
-/** Rebuilds a customer's cached balance/lifetime points from the ledger — for audits or repairs. */
+/** Rebuilds a customer's cached balance/lifetime points from the ledger — for audits or repairs.
+ * Does NOT touch tierId/protectedBalance/legacyTierId — those aren't pure functions of the
+ * ledger sum since reglas 2026 (tier depends on a rolling window + the legacy freeze; protected
+ * balance is a floor set once at activation, not reconstructable from transactions alone). */
 export async function reconcileCustomerBalance(customerProfileId: string, db: Db = prisma) {
   const transactions = await db.pointTransaction.findMany({
     where: { customerProfileId },
@@ -210,15 +155,11 @@ export async function reconcileCustomerBalance(customerProfileId: string, db: Db
     .filter((t) => LIFETIME_COUNTING_TYPES.includes(t.type))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const tiers = await listActiveTiers(db);
-  const tier = resolveTierForPoints(Math.max(0, lifetimePoints), tiers);
-
   return db.customerProfile.update({
     where: { id: customerProfileId },
     data: {
       pointsBalance: Math.max(0, pointsBalance),
       lifetimePoints: Math.max(0, lifetimePoints),
-      tierId: tier?.id ?? null,
     },
   });
 }

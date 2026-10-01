@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
-import type { Reward } from "@prisma/client";
+import type { Reward, RewardRedemption } from "@prisma/client";
 import { generateRedemptionCode } from "@/lib/codes";
 import { formatDate } from "@/lib/format";
 import { awardPoints } from "@/server/services/loyalty-service";
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
-import { resolveTierForPoints, listActiveTiers } from "@/server/services/tier-service";
+import { listActiveTiers, getEffectiveTier } from "@/server/services/tier-service";
+import { countQualifyingVisits } from "@/server/services/visit-service";
+import { toBusinessDayIndex } from "@/lib/timezone";
 
 export class RewardRedemptionError extends Error {
   constructor(public code: string, message: string) {
@@ -40,8 +42,10 @@ async function generateUniqueRedemptionCode(db: Db): Promise<string> {
 export interface RewardEligibility {
   reward: Reward;
   eligible: boolean;
-  reason?: "INSUFFICIENT_POINTS" | "OUT_OF_STOCK" | "TIER_REQUIRED" | "LIMIT_REACHED" | "COOLDOWN_ACTIVE";
+  reason?: "INSUFFICIENT_POINTS" | "OUT_OF_STOCK" | "TIER_REQUIRED" | "LIMIT_REACHED" | "COOLDOWN_ACTIVE" | "VISITS_REQUIRED";
   availableAgainAt?: Date;
+  /** Only set when reason is VISITS_REQUIRED — for "Llevás X de Y" progress copy. */
+  visitsSoFar?: number;
 }
 
 export async function listRewardsForCustomer(
@@ -56,10 +60,8 @@ export async function listRewardsForCustomer(
   const config = await getLoyaltyConfig(db);
   const now = new Date();
 
-  const customerTier = resolveTierForPoints(profile.lifetimePoints, tiers);
-  const customerTierRank = customerTier
-    ? tiers.findIndex((t) => t.id === customerTier.id)
-    : -1;
+  const { tier: customerTier } = await getEffectiveTier(profile, tiers, db);
+  const customerTierRank = customerTier ? tiers.findIndex((t) => t.id === customerTier.id) : -1;
 
   const redemptionCounts = await db.rewardRedemption.groupBy({
     by: ["rewardId"],
@@ -70,12 +72,23 @@ export async function listRewardsForCustomer(
   const countByReward = new Map(redemptionCounts.map((r) => [r.rewardId, r._count._all]));
   const lastRedeemedByReward = new Map(redemptionCounts.map((r) => [r.rewardId, r._max.createdAt]));
 
+  // Only one reward in the active catalog today needs this (the box
+  // sorpresa pair), but computed once up front either way — cheap, and
+  // avoids an extra query per reward in the loop below.
+  const needsVisitCount = rewards.some((r) => r.minimumVisits != null);
+  const visits = needsVisitCount
+    ? await countQualifyingVisits(customerProfileId, Number(config.visitMinimumAmount), undefined, db)
+    : 0;
+
   return rewards.map((reward) => {
     if (reward.requiredTierId) {
       const requiredRank = tiers.findIndex((t) => t.id === reward.requiredTierId);
       if (requiredRank === -1 || customerTierRank < requiredRank) {
         return { reward, eligible: false, reason: "TIER_REQUIRED" as const };
       }
+    }
+    if (reward.minimumVisits != null && visits < reward.minimumVisits) {
+      return { reward, eligible: false, reason: "VISITS_REQUIRED" as const, visitsSoFar: visits };
     }
     if (reward.stock !== null && reward.stock <= 0) {
       return { reward, eligible: false, reason: "OUT_OF_STOCK" as const };
@@ -129,10 +142,20 @@ export async function redeemReward(
   if (reward.requiredTierId) {
     const tiers = await listActiveTiers(db);
     const requiredRank = tiers.findIndex((t) => t.id === reward.requiredTierId);
-    const customerTier = resolveTierForPoints(profile.lifetimePoints, tiers);
+    const { tier: customerTier } = await getEffectiveTier(profile, tiers, db);
     const customerRank = customerTier ? tiers.findIndex((t) => t.id === customerTier.id) : -1;
     if (customerRank < requiredRank) {
       throw new RewardRedemptionError("TIER_REQUIRED", "Tu nivel no alcanza para este beneficio.");
+    }
+  }
+
+  if (reward.minimumVisits != null) {
+    const visits = await countQualifyingVisits(params.customerProfileId, Number(config.visitMinimumAmount), undefined, db);
+    if (visits < reward.minimumVisits) {
+      throw new RewardRedemptionError(
+        "VISITS_REQUIRED",
+        `Se desbloquea con ${reward.minimumVisits} visitas. Llevás ${visits} de ${reward.minimumVisits}.`
+      );
     }
   }
 
@@ -241,13 +264,21 @@ export async function findRedemptionByCode(code: string, db: Db = prisma) {
   });
 }
 
+export interface MarkRedemptionUsedResult {
+  redemption: RewardRedemption & { reward: Reward };
+  /** Computed discount in pesos — only set for DISCOUNT rewards with a known saleAmount.
+   * Advisory only: this app doesn't process payment, the employee applies it manually. */
+  discountAmount: number | null;
+}
+
 /** Must run inside `prisma.$transaction` — call sites wrap this. */
 export async function markRedemptionUsed(
   db: Db,
-  params: { redemptionCode: string; employeeId: string }
-) {
+  params: { redemptionCode: string; employeeId: string; saleAmount?: number }
+): Promise<MarkRedemptionUsedResult> {
   const redemption = await db.rewardRedemption.findUnique({
     where: { redemptionCode: params.redemptionCode.trim().toUpperCase() },
+    include: { reward: true },
   });
   if (!redemption) throw new RewardRedemptionError("NOT_FOUND", "Código no encontrado.");
   if (redemption.status === "USED")
@@ -259,10 +290,62 @@ export async function markRedemptionUsed(
     throw new RewardRedemptionError("EXPIRED", "Este código venció.");
   }
 
-  return db.rewardRedemption.update({
-    where: { id: redemption.id },
-    data: { status: "USED", redeemedAt: new Date(), redeemedById: params.employeeId },
+  const { reward } = redemption;
+  const now = new Date();
+
+  // Regla "un canje por visita" (reglas 2026): no se acumula con otro premio
+  // ni cupón usado el mismo día calendario (hora local de Buenos Aires).
+  const recentlyUsed = await db.rewardRedemption.findMany({
+    where: {
+      customerProfileId: redemption.customerProfileId,
+      status: "USED",
+      redeemedAt: { gte: new Date(now.getTime() - 2 * 86_400_000) },
+    },
   });
+  const todayIndex = toBusinessDayIndex(now);
+  if (recentlyUsed.some((r) => r.redeemedAt && toBusinessDayIndex(r.redeemedAt) === todayIndex)) {
+    throw new RewardRedemptionError(
+      "ALREADY_REDEEMED_TODAY",
+      "Ya se usó un beneficio hoy en esta cuenta — un canje por visita."
+    );
+  }
+
+  if (reward.minimumPurchaseAmount != null) {
+    const minimum = Number(reward.minimumPurchaseAmount);
+    if (params.saleAmount == null || params.saleAmount < minimum) {
+      throw new RewardRedemptionError(
+        "MINIMUM_PURCHASE_NOT_MET",
+        `Este beneficio exige una compra mínima de $${minimum.toLocaleString("es-AR")}.`
+      );
+    }
+  }
+
+  let discountAmount: number | null = null;
+  if (params.saleAmount != null) {
+    if (reward.discountPct != null) {
+      discountAmount = Math.floor((params.saleAmount * Number(reward.discountPct)) / 100);
+      if (reward.discountCapAmount != null) {
+        discountAmount = Math.min(discountAmount, Number(reward.discountCapAmount));
+      }
+    } else if (reward.discountFixedAmount != null) {
+      discountAmount = Number(reward.discountFixedAmount);
+    }
+  }
+
+  const updated = await db.rewardRedemption.update({
+    where: { id: redemption.id },
+    data: {
+      status: "USED",
+      redeemedAt: now,
+      redeemedById: params.employeeId,
+      saleAmount: params.saleAmount ?? null,
+    },
+  });
+
+  return {
+    redemption: { ...redemption, ...updated },
+    discountAmount,
+  };
 }
 
 /**
@@ -278,6 +361,8 @@ export async function grantFreeReward(
     rewardId: string;
     notificationTitle: string;
     notificationBody: string;
+    /** Overrides config.redemptionCodeExpiryHours — for grants with their own validity window (e.g. the win-back coupon). */
+    expiresInHours?: number;
   }
 ): Promise<RedeemRewardResult & { id: string }> {
   const [reward, profile, config] = [
@@ -286,7 +371,8 @@ export async function grantFreeReward(
     await getLoyaltyConfig(db),
   ];
 
-  const expiresAt = new Date(Date.now() + config.redemptionCodeExpiryHours * 60 * 60 * 1000);
+  const hours = params.expiresInHours ?? config.redemptionCodeExpiryHours;
+  const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000);
   const redemptionCode = await generateUniqueRedemptionCode(db);
 
   const redemption = await db.rewardRedemption.create({

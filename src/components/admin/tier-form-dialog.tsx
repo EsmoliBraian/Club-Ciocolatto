@@ -57,9 +57,17 @@ export function TierFormDialog({ tier }: { tier?: LoyaltyTier }) {
             <Field label="Slug" name="slug" defaultValue={tier?.slug} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Mín. puntos" name="minimumPoints" type="number" defaultValue={tier?.minimumPoints} required />
-            <Field label="Máx. puntos" name="maximumPoints" type="number" defaultValue={tier?.maximumPoints ?? undefined} />
+            <Field label="Mín. puntos (compras 12 meses)" name="minimumPoints" type="number" defaultValue={tier?.minimumPoints} required />
+            <Field label="Máx. puntos (solo texto)" name="maximumPoints" type="number" defaultValue={tier?.maximumPoints ?? undefined} />
           </div>
+          <Field
+            label="Multiplicador de puntos (1 = sin cambio, 1.25 = +25%)"
+            name="earnMultiplier"
+            type="number"
+            step="0.01"
+            defaultValue={tier ? Number(tier.earnMultiplier) : 1}
+            required
+          />
           <IconPicker name="icon" defaultValue={tier?.icon} />
           <Field label="Descripción" name="description" defaultValue={tier?.description ?? undefined} />
           <div className="flex flex-col gap-1.5">

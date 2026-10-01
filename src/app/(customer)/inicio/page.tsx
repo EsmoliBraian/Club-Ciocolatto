@@ -7,7 +7,7 @@ import {
   isBirthdayWindowActive,
   isAnniversaryWindowActive,
 } from "@/server/services/customer-service";
-import { listActiveTiersCached, calculateTierProgress } from "@/server/services/tier-service";
+import { listActiveTiersCached, getEffectiveTier } from "@/server/services/tier-service";
 import { listRewardsForCustomer } from "@/server/services/reward-service";
 import { getMissionsForCustomer, filterVisibleMissions } from "@/server/services/mission-service";
 import { getSurveyStateForCustomer } from "@/server/services/survey-service";
@@ -43,7 +43,7 @@ export default async function CustomerHomePage() {
     listActivePromotionsForCustomer(),
     listUpcomingPromotionsForCustomer(),
   ]);
-  const progress = calculateTierProgress(profile.lifetimePoints, tiers);
+  const { progress } = await getEffectiveTier(profile, tiers);
   const missions = filterVisibleMissions(rawMissions);
 
   const nextBenefit =

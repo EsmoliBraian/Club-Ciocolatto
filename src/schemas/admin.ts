@@ -23,6 +23,7 @@ export const tierSchema = z.object({
   description: z.string().trim().optional(),
   icon: z.string().trim().optional(),
   color: z.string().trim().optional(),
+  earnMultiplier: z.coerce.number().min(1).default(1),
   displayOrder: z.coerce.number().int().min(0).default(0),
   benefits: z
     .string()
@@ -73,6 +74,15 @@ export const rewardSchema = z.object({
   perUserLimit: z.coerce.number().int().min(1).optional(),
   validFrom: z.coerce.date().optional(),
   validUntil: z.coerce.date().optional(),
+  minimumVisits: z.coerce.number().int().min(0).optional(),
+  minimumPurchaseAmount: z.coerce.number().min(0).optional(),
+  discountPct: z.coerce.number().min(0).max(100).optional(),
+  discountFixedAmount: z.coerce.number().min(0).optional(),
+  discountCapAmount: z.coerce.number().min(0).optional(),
+  maxProductPrice: z.coerce.number().min(0).optional(),
+  internalListPrice: z.coerce.number().min(0).optional(),
+  internalCostCap: z.coerce.number().min(0).optional(),
+  internalNotes: z.string().trim().optional(),
   active: z.coerce.boolean().default(true),
 });
 export type RewardInput = z.infer<typeof rewardSchema>;
@@ -140,8 +150,16 @@ export const loyaltyConfigSchema = z.object({
   surveyPoints: z.coerce.number().int().min(0),
   winbackInactivityDays: z.coerce.number().int().min(1),
   winbackMinimumTierId: z.string().trim().optional(),
-  referralDuoBonusPoints: z.coerce.number().int().min(0),
-  referralDuoMilestoneTierId: z.string().trim().optional(),
+  winbackDiscountCap: z.coerce.number().min(0),
+  winbackValidDays: z.coerce.number().int().min(1),
+  winbackMaxFrequencyDays: z.coerce.number().int().min(1),
+  // Reglas 2026
+  activationDate: z.string().trim().optional().or(z.literal("")),
+  gracePeriodDays: z.coerce.number().int().min(0),
+  visitMinimumAmount: z.coerce.number().min(0),
+  boxUnlockVisits: z.coerce.number().int().min(0),
+  anniversaryMinVisits: z.coerce.number().int().min(0),
+  referralMinPurchaseAmount: z.coerce.number().min(0),
   businessName: z.string().trim().min(1),
   logoUrl: z.string().trim().url().optional().or(z.literal("")),
   contactEmail: z.string().trim().email().optional().or(z.literal("")),

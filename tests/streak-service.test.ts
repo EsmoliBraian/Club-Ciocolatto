@@ -58,7 +58,7 @@ describe("streak-service: updateVisitStreak", () => {
       where: { customerProfileId: profileId, source: "VISIT_STREAK" },
     });
     expect(afterMilestone).toHaveLength(1);
-    expect(afterMilestone[0].amount).toBe(50);
+    expect(afterMilestone[0].amount).toBe(25);
 
     await updateVisitStreak(prisma, profileId, days(4 * 7)); // week 5 — not a milestone
     const afterWeek5 = await prisma.pointTransaction.findMany({

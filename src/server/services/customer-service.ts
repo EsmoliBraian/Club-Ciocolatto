@@ -7,6 +7,7 @@ import { validateReferralCode, createReferral, ReferralError } from "@/server/se
 import { notify } from "@/server/services/notification-service";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { grantFreeReward } from "@/server/services/reward-service";
+import { countQualifyingVisits } from "@/server/services/visit-service";
 import { BIRTHDAY_COFFEE_REWARD_ID, ANNIVERSARY_GIFT_REWARD_ID } from "@/lib/constants";
 import type { RegisterInput } from "@/schemas/auth";
 
@@ -271,6 +272,21 @@ export async function claimAnniversaryReward(customerProfileId: string) {
     const currentYear = new Date().getFullYear();
     if (profile.anniversaryRewardClaimedYear === currentYear) {
       throw new CustomerServiceError("ALREADY_CLAIMED", "Ya reclamaste tu regalo de aniversario este año.");
+    }
+
+    // Reglas 2026: el regalo completo exige visitas reales en los últimos 12
+    // meses — evita pagarlo a cuentas que solo acumulan puntos de bonos. No
+    // se marca "reclamado" todavía: si no llega a las visitas, puede volver
+    // a chequear más tarde en la misma semana de aniversario, por si suma
+    // la visita que le falta antes de que se cierre la ventana.
+    const since = new Date(Date.now() - 365 * 86_400_000);
+    const visits = await countQualifyingVisits(profile.id, Number(config.visitMinimumAmount), since, tx);
+    if (visits < config.anniversaryMinVisits) {
+      const missing = config.anniversaryMinVisits - visits;
+      throw new CustomerServiceError(
+        "ANNIVERSARY_NOT_QUALIFIED",
+        `Te faltaron ${missing} visita${missing === 1 ? "" : "s"} para tu regalo de aniversario. El año que viene te esperamos.`
+      );
     }
 
     await tx.customerProfile.update({

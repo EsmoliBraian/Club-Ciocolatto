@@ -54,7 +54,13 @@ export async function createReferral(
   });
 }
 
-/** Call after a customer's order is registered — completes their referral on first purchase only. */
+/**
+ * Call after a customer's order is registered, but only when that order meets
+ * `LoyaltyConfig.referralMinPurchaseAmount` (reglas 2026) — the caller
+ * (order-service.ts) gates that before calling. Not necessarily the referee's
+ * very FIRST order: a small first purchase leaves the referral PENDING, and
+ * it completes on whichever later order first reaches the minimum.
+ */
 export async function completeReferralOnFirstPurchase(db: Db, refereeProfileId: string) {
   const referral = await db.referral.findUnique({ where: { refereeId: refereeProfileId } });
   if (!referral || referral.status !== "PENDING") return null;

@@ -7,6 +7,8 @@ import { evaluateMissionsForOrder } from "@/server/services/mission-service";
 import { completeReferralOnFirstPurchase } from "@/server/services/referral-service";
 import { recordAuditLog } from "@/server/services/audit-service";
 import { updateVisitStreak } from "@/server/services/streak-service";
+import { listActiveTiers, getEffectiveTier } from "@/server/services/tier-service";
+import { notify } from "@/server/services/notification-service";
 import { toBusinessLocalParts } from "@/lib/timezone";
 
 export class OrderServiceError extends Error {
@@ -26,7 +28,9 @@ export interface RegisterOrderInput {
   customerProfileId: string;
   employeeId?: string;
   source: OrderSource;
-  /** Required when `items` is omitted (e.g. employee entering a flat register total). */
+  /** Required when `items` is omitted (e.g. employee entering a flat register total).
+   * Always the NET amount actually paid — after any discount/redemption applied at the
+   * register (reglas 2026: "puntos sobre lo pagado", nunca sobre la parte descontada). */
   totalAmount?: number;
   paymentMethod?: string;
   /** POS ticket / order id. Enforces "the same sale never earns points twice". */
@@ -55,7 +59,10 @@ interface ResolvedItem {
   bonusPoints: number;
 }
 
-function computeOrderPoints(totalAmount: number, items: ResolvedItem[], config: LoyaltyConfig): number {
+/** Base points only — product-level multiplier/bonusPoints (unrelated to reglas 2026) still
+ * apply here, but NOT the tier or promotion rate, which are layered on separately by the
+ * caller so they can be recorded under their own PointSource (see registerOrder). */
+function computeBasePoints(totalAmount: number, items: ResolvedItem[], config: LoyaltyConfig): number {
   if (items.length === 0) {
     return calculatePointsForAmount(totalAmount, config);
   }
@@ -65,8 +72,17 @@ function computeOrderPoints(totalAmount: number, items: ResolvedItem[], config: 
   }, 0);
 }
 
-async function applyPromotions(db: Db, points: number, items: ResolvedItem[]): Promise<number> {
-  if (points <= 0) return points;
+interface PromotionRate {
+  /** The highest POINTS_MULTIPLIER among matching active promotions (1 = none active). */
+  multiplier: number;
+  /** Sum of all matching active BONUS_POINTS promotions — a flat add, independent of the multiplier. */
+  flatBonus: number;
+}
+
+/** Resolves which promotions apply to this order, WITHOUT applying them yet — the caller
+ * (registerOrder) still needs to compare the promo multiplier against the customer's tier
+ * multiplier and apply only the greater of the two (reglas 2026: no se acumulan). */
+async function resolvePromotionRate(db: Db, items: ResolvedItem[]): Promise<PromotionRate> {
   const now = new Date();
   const promotions = await db.promotion.findMany({
     where: { active: true, startAt: { lte: now }, endAt: { gte: now } },
@@ -75,7 +91,7 @@ async function applyPromotions(db: Db, points: number, items: ResolvedItem[]): P
   const { dayOfWeek, minuteOfDay } = toBusinessLocalParts(now);
 
   let multiplier = 1;
-  let bonus = 0;
+  let flatBonus = 0;
   for (const promo of promotions) {
     const storeWide = !promo.category && !promo.productId;
     const applies =
@@ -98,11 +114,11 @@ async function applyPromotions(db: Db, points: number, items: ResolvedItem[]): P
       multiplier = Math.max(multiplier, Number(promo.multiplier));
     }
     if (promo.type === "BONUS_POINTS" && promo.bonusPoints) {
-      bonus += promo.bonusPoints;
+      flatBonus += promo.bonusPoints;
     }
   }
 
-  return Math.floor(points * multiplier) + bonus;
+  return { multiplier, flatBonus };
 }
 
 export interface RegisterOrderResult {
@@ -113,9 +129,10 @@ export interface RegisterOrderResult {
 
 /**
  * The purchase orchestrator (the "motor de reglas"): registers the sale,
- * awards points (base + product multipliers/bonuses + active promotions +
- * first-purchase bonus), advances order-driven missions, and completes a
- * pending referral on the customer's first purchase — all in one transaction.
+ * awards points (base + the greater of the tier/promotion multiplier, both
+ * recorded separately so the base alone counts toward the tier window + first-
+ * purchase bonus), advances order-driven missions, and completes a pending
+ * referral once a qualifying purchase happens — all in one transaction.
  *
  * Idempotent on `externalReference`: replaying the same POS ticket id returns
  * the original result instead of awarding points twice.
@@ -174,9 +191,23 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
     }
 
     const basePoints = itemsAffectPoints
-      ? computeOrderPoints(totalAmount, resolvedItems, config)
-      : computeOrderPoints(totalAmount, [], config);
-    const purchasePoints = await applyPromotions(tx, basePoints, resolvedItems);
+      ? computeBasePoints(totalAmount, resolvedItems, config)
+      : computeBasePoints(totalAmount, [], config);
+
+    const promoRate = await resolvePromotionRate(tx, resolvedItems);
+    const tiers = await listActiveTiers(tx);
+    const { tier: customerTier } = await getEffectiveTier(profile, tiers, tx);
+    const tierMultiplier = Number(customerTier?.earnMultiplier ?? 1);
+
+    // "Se aplica el mayor entre nivel y promoción, no se acumulan."
+    const effectiveMultiplier = Math.max(1, tierMultiplier, promoRate.multiplier);
+    const multiplierBonus = basePoints > 0 ? Math.floor(basePoints * effectiveMultiplier) - basePoints : 0;
+    const bonusPoints = multiplierBonus + promoRate.flatBonus;
+    const bonusSource = promoRate.multiplier >= tierMultiplier && (promoRate.multiplier > 1 || promoRate.flatBonus > 0)
+      ? ("PROMOTION" as const)
+      : ("TIER_BONUS" as const);
+
+    const purchasePoints = basePoints + bonusPoints;
     const isFirstOrder = profile.totalOrders === 0;
 
     const order = await tx.order.create({
@@ -213,16 +244,54 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
       },
     });
 
-    if (purchasePoints > 0) {
+    if (basePoints > 0) {
       await awardPoints(
         {
           customerProfileId: profile.id,
           type: "EARN",
           source: "PURCHASE",
-          amount: purchasePoints,
+          amount: basePoints,
           description: input.externalReference ? `Compra #${input.externalReference}` : "Compra",
           referenceType: "Order",
           referenceId: order.id,
+          silent: true,
+        },
+        tx
+      );
+    }
+
+    if (bonusPoints > 0) {
+      await awardPoints(
+        {
+          customerProfileId: profile.id,
+          type: "EARN",
+          source: bonusSource,
+          amount: bonusPoints,
+          description:
+            bonusSource === "PROMOTION"
+              ? "Promoción activa 🎉"
+              : `Bono de nivel (${customerTier?.name ?? ""}) 🎉`,
+          referenceType: "Order",
+          referenceId: order.id,
+          silent: true,
+        },
+        tx
+      );
+    }
+
+    // Una sola notificación con el total (en vez de una por cada
+    // PointTransaction) — el cliente no necesita saber que puntos base y
+    // bono de nivel/promo se registran por separado, solo cuánto ganó.
+    if (purchasePoints > 0) {
+      await notify(
+        {
+          userId: profile.userId,
+          type: "POINTS_EARNED",
+          title: `+${purchasePoints} puntos`,
+          body:
+            bonusPoints > 0
+              ? `Compra registrada — incluye bono ${bonusSource === "PROMOTION" ? "de promoción" : "de nivel"}.`
+              : "Compra registrada.",
         },
         tx
       );
@@ -254,8 +323,18 @@ export async function registerOrder(input: RegisterOrderInput): Promise<Register
       })),
     });
 
-    await completeReferralOnFirstPurchase(tx, profile.id);
-    await updateVisitStreak(tx, profile.id, order.createdAt);
+    // "Visita" (reglas 2026) solo cuenta si la compra llega al mínimo
+    // configurado — una compra chica no alimenta rachas ni box sorpresa.
+    if (totalAmount >= Number(config.visitMinimumAmount)) {
+      await updateVisitStreak(tx, profile.id, order.createdAt);
+    }
+
+    // El referido solo se completa con una compra real de
+    // referralMinPurchaseAmount o más — puede no ser la primera (sigue
+    // PENDING hasta que alguna compra la alcance).
+    if (totalAmount >= Number(config.referralMinPurchaseAmount)) {
+      await completeReferralOnFirstPurchase(tx, profile.id);
+    }
 
     const totalPoints =
       purchasePoints + (isFirstOrder && config.firstPurchasePoints > 0 ? config.firstPurchasePoints : 0);
@@ -276,16 +355,34 @@ export async function refundOrder(
 
     await tx.order.update({ where: { id: order.id }, data: { status: "REFUNDED" } });
 
-    if (order.pointsEarned > 0) {
+    // Reverses exactly what this order gave, by whichever source it was
+    // originally recorded under (PURCHASE base, plus PROMOTION/TIER_BONUS if
+    // there was a multiplier bonus) — NOT the welcome FIRST_PURCHASE bonus,
+    // which isn't proportional to this specific sale. Doing it this way (vs.
+    // a single lump REFUND under source=PURCHASE) keeps the rolling 12-month
+    // tier window correct: it only ever reads source=PURCHASE, so a bonus
+        // recorded under PROMOTION/TIER_BONUS must also be reversed under that
+    // same source, or the window would over-subtract.
+    const earnedTransactions = await tx.pointTransaction.findMany({
+      where: {
+        referenceType: "Order",
+        referenceId: order.id,
+        type: "EARN",
+        source: { in: ["PURCHASE", "PROMOTION", "TIER_BONUS"] },
+      },
+    });
+
+    for (const t of earnedTransactions) {
       await awardPoints(
         {
           customerProfileId: order.customerProfileId,
           type: "REFUND",
-          source: "PURCHASE",
-          amount: -order.pointsEarned,
+          source: t.source,
+          amount: -t.amount,
           description: "Reembolso de compra",
           referenceType: "Order",
           referenceId: order.id,
+          silent: true,
         },
         tx
       );

@@ -46,65 +46,79 @@ async function main() {
   // techo, ahora sigue Experto y Leyenda). update: se re-aplica siempre para
   // que un reseed corrija tiers ya existentes en producción, no solo cree
   // los nuevos.
+  // Umbrales y multiplicadores "reglas 2026" (compras de los últimos 12
+  // meses, no puntos de por vida — ver tier-service.ts). maximumPoints queda
+  // en los valores viejos por ahora: solo es texto informativo en la UI, no
+  // se usa para resolver el nivel (resolveTierForPoints ignora el techo).
   const amigoData = {
     name: "Amigo Ciocolatto",
     slug: "amigo-ciocolatto",
     minimumPoints: 0,
-    maximumPoints: 199,
+    maximumPoints: 499,
     description: "El comienzo de una gran historia.",
     icon: "☕",
     color: "#8a6a4a",
     displayOrder: 1,
+    earnMultiplier: 1,
     benefits: ["Acceso al Club", "Sumás puntos en cada compra", "Misiones", "Regalo de cumpleaños"],
   };
   const fanData = {
     name: "Fan Ciocolatto",
     slug: "fan-ciocolatto",
-    minimumPoints: 200,
-    maximumPoints: 499,
+    minimumPoints: 500,
+    maximumPoints: 1499,
     description: "Disfrutás, volvés y sumás.",
     icon: "🥐",
     color: "#7c8a76",
     displayOrder: 2,
-    benefits: ["Todo lo anterior", "5% OFF en productos seleccionados", "Promociones exclusivas"],
+    earnMultiplier: 1.1,
+    benefits: ["Todo lo anterior", "+10% de puntos en cada compra", "Promociones exclusivas"],
   };
   const fanaticoData = {
     name: "Fanático Ciocolatto",
     slug: "fanatico-ciocolatto",
-    minimumPoints: 500,
-    maximumPoints: 999,
+    minimumPoints: 1500,
+    maximumPoints: 2999,
     description: "Sos parte de nuestra esencia.",
     icon: "🍰",
     color: "#c89b3c",
     displayOrder: 3,
-    benefits: ["Todo lo anterior", "10% OFF en productos seleccionados", "Beneficios especiales"],
+    earnMultiplier: 1.25,
+    benefits: ["Todo lo anterior", "+25% de puntos", "Agrandar el café gratis una vez por mes"],
   };
   const expertoData = {
     name: "Experto Ciocolatto",
     slug: "experto-ciocolatto",
-    minimumPoints: 1000,
-    maximumPoints: 1999,
+    minimumPoints: 3000,
+    maximumPoints: 5999,
     description: "Vivís Ciocolatto al máximo.",
     icon: "🏆",
     color: "#285c3a",
     displayOrder: 4,
-    benefits: ["Todo lo anterior", "15% OFF en productos seleccionados", "Lanzamientos anticipados", "Atención preferencial"],
+    earnMultiplier: 1.5,
+    benefits: [
+      "Todo lo anterior",
+      "+50% de puntos",
+      "Lanzamientos anticipados",
+      "10% OFF en la torta de cumpleaños encargada",
+    ],
   };
   const leyendaData = {
     name: "Leyenda Ciocolatto",
     slug: "leyenda-ciocolatto",
-    minimumPoints: 2000,
+    minimumPoints: 6000,
     maximumPoints: null,
     description: "Inspirás. Sos leyenda Ciocolatto.",
     icon: "👑",
     color: "#b8860b",
     displayOrder: 5,
+    earnMultiplier: 2,
     benefits: [
       "Todo lo anterior",
-      "20% OFF en productos seleccionados",
+      "Puntos dobles (+100%)",
       "Eventos exclusivos",
-      "Beneficios personalizados",
       "Reconocimiento especial en el local",
+      "Un postre sorpresa por trimestre",
     ],
   };
 
@@ -377,6 +391,26 @@ async function main() {
       category: "Chocolate",
       startAt: chocolateWeekStart,
       endAt: chocolateWeekEnd,
+      active: true,
+    },
+  });
+
+  // Puntos dobles los días de menor venta (reglas 2026) — recurrente, sin
+  // fecha de fin real (10 años). No se acumula con el multiplicador de
+  // nivel: order-service.ts aplica el mayor de los dos.
+  await prisma.promotion.upsert({
+    where: { id: "seed-promo-dobles-mie-jue" },
+    update: {},
+    create: {
+      id: "seed-promo-dobles-mie-jue",
+      name: "Puntos dobles miércoles y jueves",
+      description: "Duplicá tus puntos comprando los miércoles y jueves.",
+      icon: "✨",
+      type: "POINTS_MULTIPLIER",
+      multiplier: 2,
+      daysOfWeek: [3, 4],
+      startAt: new Date(),
+      endAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
       active: true,
     },
   });

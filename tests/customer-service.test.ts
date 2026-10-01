@@ -98,6 +98,19 @@ describe("customer-service: claimAnniversaryReward", () => {
     await prisma.customerProfile.update({ where: { id: profileId }, data: { createdAt: oneYearAgo } });
     expect(isAnniversaryWindowActive(oneYearAgo)).toBe(true);
 
+    // Reglas 2026: el regalo exige 10 visitas (compras >= visitMinimumAmount)
+    // en los últimos 12 meses — 10 días distintos dentro de esa ventana.
+    for (let i = 0; i < 10; i++) {
+      await prisma.order.create({
+        data: {
+          customerProfileId: profileId,
+          source: "MANUAL_EMPLOYEE",
+          totalAmount: 8000,
+          createdAt: new Date(Date.now() - (i + 1) * 20 * 86_400_000),
+        },
+      });
+    }
+
     const result = await claimAnniversaryReward(profileId);
     expect(result.redemptionCode).toBeTruthy();
     expect(result.pointsAwarded).toBeGreaterThan(0);

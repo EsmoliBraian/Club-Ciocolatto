@@ -154,6 +154,7 @@ export interface ValidateRedemptionState extends ActionState {
   rewardName?: string;
   customerName?: string;
   favoriteDrink?: string | null;
+  discountAmount?: number | null;
 }
 
 export async function lookupRedemptionAction(code: string) {
@@ -179,10 +180,12 @@ export async function validateRedemptionAction(
   const employee = await requireRole(...STAFF_ROLES);
   const code = String(formData.get("code") ?? "").trim();
   if (!code) return { error: "Ingresá un código." };
+  const saleAmountRaw = String(formData.get("saleAmount") ?? "").trim();
+  const saleAmount = saleAmountRaw ? Number(saleAmountRaw) : undefined;
 
   try {
-    const redemption = await prisma.$transaction((tx) =>
-      markRedemptionUsed(tx, { redemptionCode: code, employeeId: employee.id })
+    const { redemption, discountAmount } = await prisma.$transaction((tx) =>
+      markRedemptionUsed(tx, { redemptionCode: code, employeeId: employee.id, saleAmount })
     );
     const full = await findRedemptionByCode(redemption.redemptionCode);
     // "Preparar: {bebida}" only makes sense for the birthday coffee, whose
@@ -196,6 +199,7 @@ export async function validateRedemptionAction(
       rewardName: full?.reward.name,
       customerName: full ? `${full.customerProfile.user.firstName} ${full.customerProfile.user.lastName}` : undefined,
       favoriteDrink: isBirthdayCoffee ? full?.customerProfile.user.favoriteDrink : undefined,
+      discountAmount,
     };
   } catch (error) {
     if (error instanceof RewardRedemptionError) return { error: error.message };

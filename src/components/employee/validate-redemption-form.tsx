@@ -25,6 +25,10 @@ export function ValidateRedemptionForm() {
           placeholder="XXXXXXXX"
         />
       </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="saleAmount">Monto de la compra (si el beneficio lo pide)</Label>
+        <Input id="saleAmount" name="saleAmount" type="number" min={0} placeholder="Ej: 28000" />
+      </div>
       {state.error && <p className="text-sm text-destructive">{state.error}</p>}
       {state.success && (
         <div className="flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
@@ -35,6 +39,12 @@ export function ValidateRedemptionForm() {
               <>
                 {" "}
                 Preparar: <strong>{state.favoriteDrink}</strong>.
+              </>
+            )}
+            {state.discountAmount != null && (
+              <>
+                {" "}
+                Descuento a aplicar: <strong>${state.discountAmount.toLocaleString("es-AR")}</strong>.
               </>
             )}
           </span>

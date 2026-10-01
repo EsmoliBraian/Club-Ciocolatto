@@ -66,24 +66,13 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
         <CardContent className="grid grid-cols-2 gap-4">
           <Field label="Puntos para quien invita" name="referralSponsorPoints" type="number" defaultValue={config.referralSponsorPoints} required />
           <Field label="Puntos para el invitado" name="referralRefereePoints" type="number" defaultValue={config.referralRefereePoints} required />
-          <Field label="Bono dúo (ambos alcanzan el nivel)" name="referralDuoBonusPoints" type="number" defaultValue={config.referralDuoBonusPoints} required />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="referralDuoMilestoneTierId">Nivel del bono dúo</Label>
-            <Select name="referralDuoMilestoneTierId" defaultValue={config.referralDuoMilestoneTierId ?? undefined}>
-              <SelectTrigger id="referralDuoMilestoneTierId" className="w-full">
-                <SelectValue placeholder="Sin nivel (desactivado)">
-                  {(value: string | null) => (value ? tiers.find((t) => t.id === value)?.name ?? value : "Sin nivel (desactivado)")}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {tiers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Field
+            label="Compra mínima del invitado para acreditar ($)"
+            name="referralMinPurchaseAmount"
+            type="number"
+            defaultValue={Number(config.referralMinPurchaseAmount)}
+            required
+          />
         </CardContent>
       </Card>
 
@@ -93,6 +82,15 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
           <Field label="Días de inactividad" name="winbackInactivityDays" type="number" defaultValue={config.winbackInactivityDays} required />
+          <Field label="Tope del cupón ($)" name="winbackDiscountCap" type="number" defaultValue={Number(config.winbackDiscountCap)} required />
+          <Field label="Vigencia del cupón (días)" name="winbackValidDays" type="number" defaultValue={config.winbackValidDays} required />
+          <Field
+            label="Mínimo entre envíos (días)"
+            name="winbackMaxFrequencyDays"
+            type="number"
+            defaultValue={config.winbackMaxFrequencyDays}
+            required
+          />
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="winbackMinimumTierId">Nivel mínimo</Label>
             <Select name="winbackMinimumTierId" defaultValue={config.winbackMinimumTierId ?? undefined}>
@@ -110,6 +108,46 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
               </SelectContent>
             </Select>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-primary/40">
+        <CardHeader>
+          <CardTitle>Reglas 2026 (rebalanceo)</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <Label htmlFor="activationDate">
+              Fecha de activación (vacío = reglas nuevas todavía apagadas)
+            </Label>
+            <input
+              id="activationDate"
+              name="activationDate"
+              type="date"
+              defaultValue={config.activationDate ? config.activationDate.toISOString().slice(0, 10) : undefined}
+              className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Al guardar esta fecha por primera vez, se congela de una sola vez el nivel y el
+              saldo protegido de todos los socios existentes. No se puede deshacer desde acá.
+            </p>
+          </div>
+          <Field label="Días de gracia (catálogo viejo)" name="gracePeriodDays" type="number" defaultValue={config.gracePeriodDays} required />
+          <Field
+            label="Monto mínimo para contar como visita ($)"
+            name="visitMinimumAmount"
+            type="number"
+            defaultValue={Number(config.visitMinimumAmount)}
+            required
+          />
+          <Field label="Visitas para desbloquear box sorpresa" name="boxUnlockVisits" type="number" defaultValue={config.boxUnlockVisits} required />
+          <Field
+            label="Visitas mínimas para el regalo de aniversario"
+            name="anniversaryMinVisits"
+            type="number"
+            defaultValue={config.anniversaryMinVisits}
+            required
+          />
         </CardContent>
       </Card>
 

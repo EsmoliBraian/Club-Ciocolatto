@@ -71,7 +71,7 @@ describe("referral-service", () => {
     await registerOrder({
       customerProfileId: referee.profile.id,
       source: "MANUAL_EMPLOYEE",
-      totalAmount: 5000,
+      totalAmount: 15000,
       externalReference: `referral-test-${referee.profile.id}`,
     });
 
@@ -126,7 +126,7 @@ describe("referral-service", () => {
         await registerOrder({
           customerProfileId: ref.profile.id,
           source: "MANUAL_EMPLOYEE",
-          totalAmount: 5000,
+          totalAmount: 15000,
           externalReference: `referral-milestone-test-${ref.profile.id}-${i}`,
         });
       }

@@ -29,3 +29,12 @@ export function toBusinessWeekIndex(date: Date): number {
   // +3 realigns so the floor-division boundary falls on Monday instead.
   return Math.floor((daysSinceEpoch + 3) / 7);
 }
+
+/** A monotonically increasing day counter in Buenos Aires local time — same instant
+ * always maps to the same integer, consecutive calendar days differ by exactly 1.
+ * Used to group orders into "visitas" (one calendar day, local time) without relying
+ * on the process's own timezone. */
+export function toBusinessDayIndex(date: Date): number {
+  const shifted = new Date(date.getTime() + BUENOS_AIRES_OFFSET_HOURS * 60 * 60 * 1000);
+  return Math.floor(shifted.getTime() / 86_400_000);
+}

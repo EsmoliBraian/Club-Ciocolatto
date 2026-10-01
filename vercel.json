@@ -15,6 +15,14 @@
     {
       "path": "/api/cron/points-expiry-warning",
       "schedule": "15 12 * * *"
+    },
+    {
+      "path": "/api/cron/points-expiry",
+      "schedule": "20 12 * * *"
+    },
+    {
+      "path": "/api/cron/catalog-flip",
+      "schedule": "25 12 * * *"
     }
   ]
 }

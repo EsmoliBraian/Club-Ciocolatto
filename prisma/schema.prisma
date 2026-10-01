@@ -46,7 +46,15 @@ enum PointSource {
   PROFILE_COMPLETION
   SURVEY_RESPONSE
   CLAIM_APPROVED
+  // Ya no se otorga (reglas 2026 sacaron el bono dúo) — se conserva para no
+  // perder el historial de lo ya pagado en PointTransaction/Referral.
   REFERRAL_DUO
+  // Puntos extra por el multiplicador de nivel en una compra (reglas 2026).
+  // Separado de PURCHASE a propósito: no cuenta para la ventana de 12 meses
+  // que define el nivel (regla: "cuenta el punto base, no el extra").
+  TIER_BONUS
+  // Vencimiento real por inactividad (reglas 2026) — ver /api/cron/points-expiry.
+  POINTS_EXPIRED
 }
 
 enum MissionType {
@@ -190,6 +198,20 @@ model CustomerProfile {
   lastOrderAt                  DateTime?
   birthdayRewardClaimedYear    Int?
   anniversaryRewardClaimedYear Int?
+  // "Saldo protegido" (reglas 2026) — puntos que ya tenía el socio al activar
+  // las reglas nuevas, nunca vencen. Cada baja de saldo lo achica si hace
+  // falta (awardPoints: protectedBalance = min(protectedBalance, newBalance)),
+  // así el vencimiento por inactividad siempre gasta primero los puntos
+  // nuevos. 0 para un socio que se registra después de la activación (todos
+  // sus puntos son "nuevos").
+  protectedBalance             Int          @default(0)
+  // Nivel "congelado" al momento de activar las reglas 2026, para los socios
+  // que ya existían — se muestra como nivel efectivo hasta el 31/12/2026 en
+  // vez de recalcularlo con la ventana de compras de 12 meses. Null para
+  // socios que se registran después de la activación (no tienen nada que
+  // congelar, usan la regla nueva desde el día uno).
+  legacyTierId                 String?
+  legacyTier                   LoyaltyTier? @relation("LegacyTier", fields: [legacyTierId], references: [id])
   visitStreakWeeks             Int          @default(0)
   visitStreakWeekIndex         Int? // Monday-aligned week counter in business-local time, see src/lib/timezone.ts
   visitStreakMilestoneWeeks    Int          @default(0)
@@ -218,21 +240,28 @@ model CustomerProfile {
 // ─────────────────────────────────────────────────────────────────────────
 
 model LoyaltyTier {
-  id            String   @id @default(cuid())
-  name          String
-  slug          String   @unique
-  minimumPoints Int
-  maximumPoints Int?
-  description   String?
-  benefits      Json // string[]
-  icon          String?
-  color         String?
-  displayOrder  Int      @default(0)
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  minimumPoints  Int
+  maximumPoints  Int?
+  description    String?
+  benefits       Json // string[] — texto libre mostrado al cliente, no leído por la lógica de puntos
+  // Multiplicador de puntos por compra de este nivel (1 = sin cambio, 1.25 =
+  // +25%). No se acumula con la promoción de puntos dobles — se aplica el
+  // mayor de los dos (ver computeOrderPoints en order-service.ts). Los
+  // puntos extra que da este multiplicador no cuentan para el umbral de
+  // nivel: ver PointSource.TIER_BONUS.
+  earnMultiplier Decimal  @default(1) @db.Decimal(4, 2)
+  icon           String?
+  color          String?
+  displayOrder   Int      @default(0)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   customers          CustomerProfile[]
+  legacyCustomers    CustomerProfile[] @relation("LegacyTier")
   rewards            Reward[]
   winbackConfigs     LoyaltyConfig[]   @relation("WinbackMinimumTier")
   referralDuoConfigs LoyaltyConfig[]   @relation("ReferralDuoMilestoneTier")
@@ -322,23 +351,48 @@ model MissionProgress {
 // ─────────────────────────────────────────────────────────────────────────
 
 model Reward {
-  id             String         @id @default(cuid())
-  name           String
-  description    String?
-  imageUrl       String?
-  icon           String? // emoji shown in the customer store, e.g. "☕"
-  category       RewardCategory @default(PRODUCT)
-  pointsCost     Int
-  stock          Int? // null = unlimited
-  requiredTierId String?
-  requiredTier   LoyaltyTier?   @relation(fields: [requiredTierId], references: [id])
-  perUserLimit   Int? // null = unlimited
-  validFrom      DateTime?
-  validUntil     DateTime?
-  active         Boolean        @default(true)
-  hidden         Boolean        @default(false) // excluded from the customer store — for internal/automatic grants (e.g. the birthday coffee)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  name                  String
+  description           String?
+  imageUrl              String?
+  icon                  String? // emoji shown in the customer store, e.g. "☕"
+  category              RewardCategory @default(PRODUCT)
+  pointsCost            Int
+  stock                 Int? // null = unlimited
+  requiredTierId        String?
+  requiredTier          LoyaltyTier?   @relation(fields: [requiredTierId], references: [id])
+  perUserLimit          Int? // null = unlimited
+  validFrom             DateTime?
+  validUntil            DateTime?
+  // Visitas mínimas (histórico, desde que el socio se registró) para poder
+  // canjear — hoy solo lo usan los "box sorpresa". Null = sin requisito.
+  minimumVisits         Int?
+  // Monto mínimo de la COMPRA en la que se usa el canje (se valida al
+  // validar el código en caja, cuando ya se conoce el monto real). Null =
+  // sin mínimo.
+  minimumPurchaseAmount Decimal?       @db.Decimal(10, 2)
+  // Porcentaje de descuento (ej. 10 = 10% OFF) — el descuento real se
+  // calcula sobre saleAmount y se topea con discountCapAmount. Null si este
+  // premio no es un %.
+  discountPct           Decimal?       @db.Decimal(5, 2)
+  // Descuento en pesos, monto fijo (ej. "$5.000 OFF") — se usa cuando
+  // discountPct es null.
+  discountFixedAmount   Decimal?       @db.Decimal(10, 2)
+  // Tope en pesos del descuento que da este premio cuando es por %. Null =
+  // sin tope.
+  discountCapAmount     Decimal?       @db.Decimal(10, 2)
+  // Tope de precio de lista del producto que se puede elegir al canjear
+  // (ej. "café a elección hasta $6.000"). Null = sin tope / no aplica.
+  maxProductPrice       Decimal?       @db.Decimal(10, 2)
+  // Datos internos de costo — solo para referencia del admin, nunca se
+  // muestran al socio (ver /admin/premios).
+  internalListPrice     Decimal?       @db.Decimal(10, 2)
+  internalCostCap       Decimal?       @db.Decimal(10, 2)
+  internalNotes         String?
+  active                Boolean        @default(true)
+  hidden                Boolean        @default(false) // excluded from the customer store — for internal/automatic grants (e.g. the birthday coffee)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   redemptions RewardRedemption[]
   missions    Mission[]
@@ -357,6 +411,11 @@ model RewardRedemption {
   status            RedemptionStatus @default(PENDING)
   expiresAt         DateTime?
   redeemedAt        DateTime?
+  // Monto de la compra, ingresado por el empleado al validar el código en
+  // caja (no se conoce al momento de generar el canje). Habilita el tope de
+  // descuento y la compra mínima de `Reward`. Null si el premio no lo
+  // necesita (ej. un café gratis sin condición de monto).
+  saleAmount        Decimal?         @db.Decimal(10, 2)
   redeemedById      String?
   redeemedBy        User?            @relation("RedeemedByEmployee", fields: [redeemedById], references: [id])
   createdAt         DateTime         @default(now())
@@ -540,7 +599,10 @@ model LoyaltyConfig {
   // top-up on top of the ladder is ever wanted again.
   referralSponsorPoints      Int          @default(0)
   referralRefereePoints      Int          @default(100)
-  pointsExpireAfterDays      Int? // null = points never expire
+  // null = no expiran. Desde las reglas 2026: días SIN COMPRAS (no desde que
+  // se ganó cada punto) después de los cuales vence todo lo que supere
+  // protectedBalance. 180 ≈ 6 meses.
+  pointsExpireAfterDays      Int?
   redemptionCodeExpiryHours  Int          @default(72)
   rewardCooldownDays         Int?         @default(30) // null = no cooldown; days before a customer can redeem the SAME reward again
   anniversaryPoints          Int          @default(150)
@@ -550,9 +612,31 @@ model LoyaltyConfig {
   winbackInactivityDays      Int          @default(35)
   winbackMinimumTierId       String?
   winbackMinimumTier         LoyaltyTier? @relation("WinbackMinimumTier", fields: [winbackMinimumTierId], references: [id])
+  // Ya no se otorga (reglas 2026) — ver REFERRAL_DUO. Se conservan estos dos
+  // campos solo porque el admin podría querer revisarlos; sin lógica activa.
   referralDuoBonusPoints     Int          @default(100)
   referralDuoMilestoneTierId String?
   referralDuoMilestoneTier   LoyaltyTier? @relation("ReferralDuoMilestoneTier", fields: [referralDuoMilestoneTierId], references: [id])
+  // ── Reglas 2026 (rebalanceo de puntos/premios/niveles) ──
+  // Fecha en la que entran en vigencia las reglas nuevas. Null = todavía no
+  // se activaron (toda la app sigue funcionando con las reglas viejas). Al
+  // setearla por primera vez, se snapshotea de una vez protectedBalance y
+  // legacyTierId de todos los socios existentes (ver updateConfigAction).
+  activationDate             DateTime?
+  gracePeriodDays            Int          @default(15)
+  // Monto mínimo de una compra para que cuente como "visita" (rachas, box
+  // sorpresa, aniversario).
+  visitMinimumAmount         Decimal      @default(8000) @db.Decimal(10, 2)
+  boxUnlockVisits            Int          @default(8)
+  anniversaryMinVisits       Int          @default(10)
+  referralMinPurchaseAmount  Decimal      @default(10000) @db.Decimal(10, 2)
+  winbackDiscountCap         Decimal      @default(3000) @db.Decimal(10, 2)
+  winbackValidDays           Int          @default(15)
+  winbackMaxFrequencyDays    Int          @default(90)
+  // Se completa una sola vez, cuando el cron de activación aplica el
+  // catálogo nuevo (precios/requisitos/cooldown) al terminar el período de
+  // gracia. Null = todavía corre con el catálogo viejo (o nunca se activó).
+  catalogFlippedAt           DateTime?
   businessName               String       @default("Ciocolatto")
   logoUrl                    String?
   contactEmail               String?

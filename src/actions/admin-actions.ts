@@ -173,6 +173,7 @@ export async function saveTierAction(_prev: ActionState, formData: FormData): Pr
     description: formData.get("description"),
     icon: formData.get("icon"),
     color: formData.get("color"),
+    earnMultiplier: formData.get("earnMultiplier"),
     displayOrder: formData.get("displayOrder"),
     benefits: formData.get("benefits") ?? "",
     active: checkbox(formData, "active"),
@@ -269,6 +270,15 @@ export async function saveRewardAction(_prev: ActionState, formData: FormData): 
     perUserLimit: optionalString(formData, "perUserLimit"),
     validFrom: optionalString(formData, "validFrom"),
     validUntil: optionalString(formData, "validUntil"),
+    minimumVisits: optionalString(formData, "minimumVisits"),
+    minimumPurchaseAmount: optionalString(formData, "minimumPurchaseAmount"),
+    discountPct: optionalString(formData, "discountPct"),
+    discountFixedAmount: optionalString(formData, "discountFixedAmount"),
+    discountCapAmount: optionalString(formData, "discountCapAmount"),
+    maxProductPrice: optionalString(formData, "maxProductPrice"),
+    internalListPrice: optionalString(formData, "internalListPrice"),
+    internalCostCap: optionalString(formData, "internalCostCap"),
+    internalNotes: optionalString(formData, "internalNotes"),
     active: checkbox(formData, "active"),
   });
   if (!parsed.success) {
@@ -566,8 +576,15 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
     surveyPoints: formData.get("surveyPoints"),
     winbackInactivityDays: formData.get("winbackInactivityDays"),
     winbackMinimumTierId: optionalString(formData, "winbackMinimumTierId"),
-    referralDuoBonusPoints: formData.get("referralDuoBonusPoints"),
-    referralDuoMilestoneTierId: optionalString(formData, "referralDuoMilestoneTierId"),
+    winbackDiscountCap: formData.get("winbackDiscountCap"),
+    winbackValidDays: formData.get("winbackValidDays"),
+    winbackMaxFrequencyDays: formData.get("winbackMaxFrequencyDays"),
+    activationDate: formData.get("activationDate") ?? "",
+    gracePeriodDays: formData.get("gracePeriodDays"),
+    visitMinimumAmount: formData.get("visitMinimumAmount"),
+    boxUnlockVisits: formData.get("boxUnlockVisits"),
+    anniversaryMinVisits: formData.get("anniversaryMinVisits"),
+    referralMinPurchaseAmount: formData.get("referralMinPurchaseAmount"),
     businessName: formData.get("businessName"),
     logoUrl: formData.get("logoUrl") ?? "",
     contactEmail: formData.get("contactEmail") ?? "",
@@ -578,7 +595,7 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
     return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { logoUrl, contactEmail, instagramUrl, surveyQuestion, winbackMinimumTierId, referralDuoMilestoneTierId, ...rest } =
+  const { logoUrl, contactEmail, instagramUrl, surveyQuestion, winbackMinimumTierId, activationDate, ...rest } =
     parsed.data;
   const data = {
     ...rest,
@@ -589,13 +606,45 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
     rewardCooldownDays: parsed.data.rewardCooldownDays ?? null,
     surveyQuestion: surveyQuestion || null,
     winbackMinimumTierId: winbackMinimumTierId || null,
-    referralDuoMilestoneTierId: referralDuoMilestoneTierId || null,
+    activationDate: activationDate ? new Date(activationDate) : null,
   };
 
-  await prisma.loyaltyConfig.upsert({
-    where: { id: "singleton" },
-    update: data,
-    create: { id: "singleton", ...data },
+  const previous = await prisma.loyaltyConfig.findUnique({ where: { id: "singleton" } });
+  const isFirstActivation = !previous?.activationDate && !!data.activationDate;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.loyaltyConfig.upsert({
+      where: { id: "singleton" },
+      update: data,
+      create: { id: "singleton", ...data },
+    });
+
+    // Reglas 2026, momento de activación: se "congela" de una sola vez el
+    // nivel y el saldo protegido de cada socio existente — después de esto
+    // ya no se puede volver a correr (isFirstActivation solo es true la
+    // primera vez que se completa esta fecha).
+    if (isFirstActivation) {
+      const profiles = await tx.customerProfile.findMany({
+        where: { user: { role: "CUSTOMER" } },
+        select: { id: true, pointsBalance: true, tierId: true },
+      });
+      for (const profile of profiles) {
+        await tx.customerProfile.update({
+          where: { id: profile.id },
+          data: { protectedBalance: profile.pointsBalance, legacyTierId: profile.tierId },
+        });
+      }
+      await recordAuditLog(
+        {
+          actorId: actor.id,
+          action: "LOYALTY_RULES_2026_ACTIVATED",
+          entityType: "LoyaltyConfig",
+          entityId: "singleton",
+          changes: { activationDate: data.activationDate, socios: profiles.length },
+        },
+        tx
+      );
+    }
   });
 
   await recordAuditLog({

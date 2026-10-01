@@ -106,6 +106,73 @@ export function RewardFormDialog({ reward, tiers }: { reward?: Reward; tiers: Lo
               defaultValue={reward?.validUntil?.toISOString().slice(0, 10)}
             />
           </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Reglas 2026 (opcional)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Visitas mínimas"
+                name="minimumVisits"
+                type="number"
+                defaultValue={reward?.minimumVisits ?? undefined}
+              />
+              <Field
+                label="Compra mínima ($)"
+                name="minimumPurchaseAmount"
+                type="number"
+                defaultValue={reward?.minimumPurchaseAmount ? Number(reward.minimumPurchaseAmount) : undefined}
+              />
+              <Field
+                label="Descuento (%)"
+                name="discountPct"
+                type="number"
+                step="0.01"
+                defaultValue={reward?.discountPct ? Number(reward.discountPct) : undefined}
+              />
+              <Field
+                label="Descuento fijo ($)"
+                name="discountFixedAmount"
+                type="number"
+                defaultValue={reward?.discountFixedAmount ? Number(reward.discountFixedAmount) : undefined}
+              />
+              <Field
+                label="Tope del descuento ($)"
+                name="discountCapAmount"
+                type="number"
+                defaultValue={reward?.discountCapAmount ? Number(reward.discountCapAmount) : undefined}
+              />
+              <Field
+                label="Tope precio de lista ($)"
+                name="maxProductPrice"
+                type="number"
+                defaultValue={reward?.maxProductPrice ? Number(reward.maxProductPrice) : undefined}
+              />
+            </div>
+            <p className="mt-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Datos internos (nunca se muestran al socio)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Field
+                label="Precio de lista ($)"
+                name="internalListPrice"
+                type="number"
+                defaultValue={reward?.internalListPrice ? Number(reward.internalListPrice) : undefined}
+              />
+              <Field
+                label="Tope de costo ($)"
+                name="internalCostCap"
+                type="number"
+                defaultValue={reward?.internalCostCap ? Number(reward.internalCostCap) : undefined}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="internalNotes">Notas internas</Label>
+              <Textarea id="internalNotes" name="internalNotes" defaultValue={reward?.internalNotes ?? undefined} rows={2} />
+            </div>
+          </div>
+
           <label className="flex items-center gap-2 text-sm">
             <Checkbox name="active" defaultChecked={reward?.active ?? true} />
             Activo
