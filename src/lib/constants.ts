@@ -37,10 +37,6 @@ export const POINT_CLAIM_SUGGESTED_POINTS: Record<"SOCIAL_MEDIA_POST" | "REVIEW"
 /** A customer may only submit one PointClaim (review/social post) per calendar month. */
 export const POINT_CLAIM_MONTHLY_LIMIT = 1;
 
-/** Tier freeze transition (reglas 2026): existing customers keep their legacyTierId as their
- * effective tier until this date; from here on everyone uses the rolling 12-month purchase window. */
-export const TIER_FREEZE_END = new Date("2027-01-01T00:00:00.000Z");
-
 /** Window (in days) used to compute a tier from PURCHASE points — "últimos 12 meses". */
 export const TIER_WINDOW_DAYS = 365;
 

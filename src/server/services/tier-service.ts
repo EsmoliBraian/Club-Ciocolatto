@@ -2,7 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { CustomerProfile, LoyaltyTier } from "@prisma/client";
-import { TIER_FREEZE_END, TIER_WINDOW_DAYS } from "@/lib/constants";
+import { TIER_WINDOW_DAYS } from "@/lib/constants";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 
 export async function listActiveTiers(db: Db = prisma): Promise<LoyaltyTier[]> {
@@ -97,9 +97,6 @@ export async function getRollingPurchasePoints(customerProfileId: string, db: Db
 
 export interface EffectiveTierResult {
   tier: LoyaltyTier | null;
-  /** True while this customer's tier is still the pre-2026 snapshot (legacyTierId), not yet
-   * recalculated from rolling purchases — see TIER_FREEZE_END. */
-  frozen: boolean;
   rollingPoints: number;
   progress: TierProgress;
 }
@@ -110,30 +107,25 @@ export interface EffectiveTierResult {
  *   like before this rebalance — resolved from `lifetimePoints`, no multiplier logic engaged
  *   anywhere downstream. This is what keeps deploying this code a no-op for real customers
  *   until an admin deliberately sets the activation date — never flip this check off.
- * - Once activated, existing customers (`legacyTierId` snapshotted at that moment) keep that
- *   frozen tier until TIER_FREEZE_END, regardless of what their rolling purchases say.
- * - Everyone else (new customers from day one, or anyone once the freeze ends): the tier from
- *   `getRollingPurchasePoints` — this can go DOWN as old purchases fall out of the window.
+ * - Once activated: everyone (existing and new customers alike) resolves from
+ *   `getRollingPurchasePoints` — no grandfather freeze. A customer's tier can go DOWN the
+ *   moment old purchases fall out of the 12-month window. This is deliberate — the owner
+ *   explicitly asked for levels to keep moving, not freeze at today's status.
  */
 export async function getEffectiveTier(
-  profile: Pick<CustomerProfile, "id" | "legacyTierId" | "lifetimePoints">,
+  profile: Pick<CustomerProfile, "id" | "lifetimePoints">,
   tiers: LoyaltyTier[],
   db: Db = prisma
 ): Promise<EffectiveTierResult> {
   const config = await getLoyaltyConfig(db);
   if (!config.activationDate) {
     const tier = resolveTierForPoints(profile.lifetimePoints, tiers);
-    return { tier, frozen: false, rollingPoints: 0, progress: calculateTierProgress(profile.lifetimePoints, tiers) };
+    return { tier, rollingPoints: 0, progress: calculateTierProgress(profile.lifetimePoints, tiers) };
   }
 
-  if (profile.legacyTierId && Date.now() < TIER_FREEZE_END.getTime()) {
-    const tier = tiers.find((t) => t.id === profile.legacyTierId) ?? null;
-    return { tier, frozen: true, rollingPoints: 0, progress: calculateTierProgress(tier?.minimumPoints ?? 0, tiers) };
-  }
   const rollingPoints = await getRollingPurchasePoints(profile.id, db);
   return {
     tier: resolveTierForPoints(rollingPoints, tiers),
-    frozen: false,
     rollingPoints,
     progress: calculateTierProgress(rollingPoints, tiers),
   };

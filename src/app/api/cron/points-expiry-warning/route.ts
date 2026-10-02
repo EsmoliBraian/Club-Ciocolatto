@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLoyaltyConfig } from "@/server/services/config-service";
 import { notify } from "@/server/services/notification-service";
+import { getProtectedBalance } from "@/server/services/loyalty-service";
 import { POINTS_EXPIRING_WARNING_WINDOW_DAYS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +23,8 @@ export async function GET(request: Request) {
   }
 
   const config = await getLoyaltyConfig();
-  if (config.pointsExpireAfterDays == null) {
-    return NextResponse.json({ skipped: true, reason: "pointsExpireAfterDays not configured" });
+  if (config.pointsExpireAfterDays == null || !config.activationDate) {
+    return NextResponse.json({ skipped: true, reason: "pointsExpireAfterDays or activationDate not configured" });
   }
 
   const now = new Date();
@@ -42,7 +43,8 @@ export async function GET(request: Request) {
 
   let warned = 0;
   for (const profile of candidates) {
-    if (profile.pointsBalance <= profile.protectedBalance) continue; // nothing at risk
+    const protectedBalance = await getProtectedBalance(profile.id, profile.pointsBalance, config.activationDate);
+    if (profile.pointsBalance <= protectedBalance) continue; // nothing at risk
 
     const anchor = profile.lastOrderAt ?? profile.createdAt;
     // Idempotency: only once per inactivity stretch — re-warn only if they've

@@ -198,20 +198,6 @@ model CustomerProfile {
   lastOrderAt                  DateTime?
   birthdayRewardClaimedYear    Int?
   anniversaryRewardClaimedYear Int?
-  // "Saldo protegido" (reglas 2026) — puntos que ya tenía el socio al activar
-  // las reglas nuevas, nunca vencen. Cada baja de saldo lo achica si hace
-  // falta (awardPoints: protectedBalance = min(protectedBalance, newBalance)),
-  // así el vencimiento por inactividad siempre gasta primero los puntos
-  // nuevos. 0 para un socio que se registra después de la activación (todos
-  // sus puntos son "nuevos").
-  protectedBalance             Int          @default(0)
-  // Nivel "congelado" al momento de activar las reglas 2026, para los socios
-  // que ya existían — se muestra como nivel efectivo hasta el 31/12/2026 en
-  // vez de recalcularlo con la ventana de compras de 12 meses. Null para
-  // socios que se registran después de la activación (no tienen nada que
-  // congelar, usan la regla nueva desde el día uno).
-  legacyTierId                 String?
-  legacyTier                   LoyaltyTier? @relation("LegacyTier", fields: [legacyTierId], references: [id])
   visitStreakWeeks             Int          @default(0)
   visitStreakWeekIndex         Int? // Monday-aligned week counter in business-local time, see src/lib/timezone.ts
   visitStreakMilestoneWeeks    Int          @default(0)
@@ -261,7 +247,6 @@ model LoyaltyTier {
   updatedAt      DateTime @updatedAt
 
   customers          CustomerProfile[]
-  legacyCustomers    CustomerProfile[] @relation("LegacyTier")
   rewards            Reward[]
   winbackConfigs     LoyaltyConfig[]   @relation("WinbackMinimumTier")
   referralDuoConfigs LoyaltyConfig[]   @relation("ReferralDuoMilestoneTier")
@@ -600,8 +585,9 @@ model LoyaltyConfig {
   referralSponsorPoints      Int          @default(0)
   referralRefereePoints      Int          @default(100)
   // null = no expiran. Desde las reglas 2026: días SIN COMPRAS (no desde que
-  // se ganó cada punto) después de los cuales vence todo lo que supere
-  // protectedBalance. 180 ≈ 6 meses.
+  // se ganó cada punto) después de los cuales vence todo lo que supere el
+  // saldo protegido (ver getProtectedBalance en loyalty-service.ts, derivado
+  // del ledger — no es una columna). 180 ≈ 6 meses.
   pointsExpireAfterDays      Int?
   redemptionCodeExpiryHours  Int          @default(72)
   rewardCooldownDays         Int?         @default(30) // null = no cooldown; days before a customer can redeem the SAME reward again
@@ -619,9 +605,10 @@ model LoyaltyConfig {
   referralDuoMilestoneTier   LoyaltyTier? @relation("ReferralDuoMilestoneTier", fields: [referralDuoMilestoneTierId], references: [id])
   // ── Reglas 2026 (rebalanceo de puntos/premios/niveles) ──
   // Fecha en la que entran en vigencia las reglas nuevas. Null = todavía no
-  // se activaron (toda la app sigue funcionando con las reglas viejas). Al
-  // setearla por primera vez, se snapshotea de una vez protectedBalance y
-  // legacyTierId de todos los socios existentes (ver updateConfigAction).
+  // se activaron (toda la app sigue funcionando con las reglas viejas). No
+  // hay congelamiento de nivel ni snapshot de saldo que hacer al activarla:
+  // el nivel se recalcula en vivo para todos (rolling 12 meses) y el saldo
+  // protegido se deriva del ledger — ninguno toca CustomerProfile.
   activationDate             DateTime?
   gracePeriodDays            Int          @default(15)
   // Monto mínimo de una compra para que cuente como "visita" (rachas, box

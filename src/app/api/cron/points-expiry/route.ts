@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getLoyaltyConfig } from "@/server/services/config-service";
-import { awardPoints } from "@/server/services/loyalty-service";
+import { awardPoints, getProtectedBalance } from "@/server/services/loyalty-service";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +12,11 @@ export const dynamic = "force-dynamic";
  *
  * Rule (sección 5.3 del documento de reglas): a customer who has gone
  * `pointsExpireAfterDays` days without a single purchase loses everything
- * above their `protectedBalance` — the floor set once at activation (or 0
- * for anyone who joined after it). Naturally idempotent: once a customer's
- * balance reaches their protected floor, `pointsBalance > protectedBalance`
- * is false, so they're skipped on every subsequent run until they earn new
- * points and go inactive again.
+ * above their protected balance — whatever they already had at
+ * `activationDate` (see `getProtectedBalance`, computed from the ledger, not
+ * a stored column). Naturally idempotent: once a customer's balance reaches
+ * their protected floor, there's nothing left to expire, so they're skipped
+ * on every subsequent run until they earn new points and go inactive again.
  */
 export async function GET(request: Request) {
   if (process.env.CRON_SECRET) {
@@ -27,8 +27,8 @@ export async function GET(request: Request) {
   }
 
   const config = await getLoyaltyConfig();
-  if (config.pointsExpireAfterDays == null) {
-    return NextResponse.json({ skipped: true, reason: "pointsExpireAfterDays not configured" });
+  if (config.pointsExpireAfterDays == null || !config.activationDate) {
+    return NextResponse.json({ skipped: true, reason: "pointsExpireAfterDays or activationDate not configured" });
   }
 
   const cutoff = new Date(Date.now() - config.pointsExpireAfterDays * 86_400_000);
@@ -46,7 +46,8 @@ export async function GET(request: Request) {
   let expiredCount = 0;
   let totalExpired = 0;
   for (const profile of candidates) {
-    const toExpire = profile.pointsBalance - profile.protectedBalance;
+    const protectedBalance = await getProtectedBalance(profile.id, profile.pointsBalance, config.activationDate);
+    const toExpire = profile.pointsBalance - protectedBalance;
     if (toExpire <= 0) continue;
 
     await prisma.$transaction((tx) =>

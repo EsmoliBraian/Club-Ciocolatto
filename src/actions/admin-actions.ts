@@ -612,40 +612,26 @@ export async function updateConfigAction(_prev: ActionState, formData: FormData)
   const previous = await prisma.loyaltyConfig.findUnique({ where: { id: "singleton" } });
   const isFirstActivation = !previous?.activationDate && !!data.activationDate;
 
-  await prisma.$transaction(async (tx) => {
-    await tx.loyaltyConfig.upsert({
-      where: { id: "singleton" },
-      update: data,
-      create: { id: "singleton", ...data },
-    });
-
-    // Reglas 2026, momento de activación: se "congela" de una sola vez el
-    // nivel y el saldo protegido de cada socio existente — después de esto
-    // ya no se puede volver a correr (isFirstActivation solo es true la
-    // primera vez que se completa esta fecha).
-    if (isFirstActivation) {
-      const profiles = await tx.customerProfile.findMany({
-        where: { user: { role: "CUSTOMER" } },
-        select: { id: true, pointsBalance: true, tierId: true },
-      });
-      for (const profile of profiles) {
-        await tx.customerProfile.update({
-          where: { id: profile.id },
-          data: { protectedBalance: profile.pointsBalance, legacyTierId: profile.tierId },
-        });
-      }
-      await recordAuditLog(
-        {
-          actorId: actor.id,
-          action: "LOYALTY_RULES_2026_ACTIVATED",
-          entityType: "LoyaltyConfig",
-          entityId: "singleton",
-          changes: { activationDate: data.activationDate, socios: profiles.length },
-        },
-        tx
-      );
-    }
+  await prisma.loyaltyConfig.upsert({
+    where: { id: "singleton" },
+    update: data,
+    create: { id: "singleton", ...data },
   });
+
+  if (isFirstActivation) {
+    // No hay congelamiento de nivel ni snapshot de saldo que hacer: el nivel
+    // se recalcula en vivo para todos desde este momento (rolling 12 meses),
+    // y el saldo protegido para el vencimiento se deriva del historial de
+    // puntos (ver getProtectedBalance) — ninguno necesita tocar la tabla de
+    // clientes. Solo queda registrarlo.
+    await recordAuditLog({
+      actorId: actor.id,
+      action: "LOYALTY_RULES_2026_ACTIVATED",
+      entityType: "LoyaltyConfig",
+      entityId: "singleton",
+      changes: { activationDate: data.activationDate },
+    });
+  }
 
   await recordAuditLog({
     actorId: actor.id,

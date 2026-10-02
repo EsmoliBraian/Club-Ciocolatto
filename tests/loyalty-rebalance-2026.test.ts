@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { registerOrder } from "@/server/services/order-service";
-import { awardPoints } from "@/server/services/loyalty-service";
+import { awardPoints, getProtectedBalance } from "@/server/services/loyalty-service";
 import { getLoyaltyConfig, calculatePointsForAmount } from "@/server/services/config-service";
 import { redeemReward } from "@/server/services/reward-service";
 import { createReferral } from "@/server/services/referral-service";
@@ -207,30 +207,46 @@ describe("reglas 2026: saldo protegido (vencimiento solo de puntos nuevos)", () 
     await cleanupTestCustomer(userId);
   });
 
-  it("un canje gasta primero los puntos nuevos, y protectedBalance baja junto con el saldo si hace falta", async () => {
-    // 300 protegidos (como si fuera el saldo al activar), + 100 nuevos.
-    await prisma.customerProfile.update({
-      where: { id: profileId },
-      data: { pointsBalance: 300, protectedBalance: 300 },
+  it("protege el saldo que ya tenía al activar; lo ganado después vence y un canje lo gasta primero", async () => {
+    // 300 puntos "al momento de activar" (caso 10 del documento).
+    await awardPoints({
+      customerProfileId: profileId,
+      type: "EARN",
+      source: "PURCHASE",
+      amount: 300,
+      description: "antes de activar",
+      silent: true,
     });
+    const activationMoment = new Date();
+
+    // 100 más, ganados DESPUÉS de activar — estos son los que pueden vencer.
     await awardPoints({
       customerProfileId: profileId,
       type: "EARN",
       source: "MANUAL_ADMIN",
       amount: 100,
-      description: "test",
+      description: "después de activar",
       silent: true,
     });
+
     let profile = await prisma.customerProfile.findUniqueOrThrow({ where: { id: profileId } });
     expect(profile.pointsBalance).toBe(400);
-    expect(profile.protectedBalance).toBe(300); // ganar puntos nunca sube el piso protegido
+    expect(await getProtectedBalance(profileId, profile.pointsBalance, activationMoment)).toBe(300);
 
-    const reward = await prisma.reward.findUniqueOrThrow({ where: { id: "seed-reward-cafe" } });
-    await prisma.$transaction((tx) => redeemReward(tx, { customerProfileId: profileId, rewardId: reward.id }));
+    // Caso 13: un canje de 150 gasta primero los 100 nuevos y además entra
+    // 50 en lo protegido — el protegido baja junto con el saldo, a 250.
+    await awardPoints({
+      customerProfileId: profileId,
+      type: "REDEEM",
+      source: "REDEMPTION",
+      amount: -150,
+      description: "canje de prueba",
+      silent: true,
+    });
 
     profile = await prisma.customerProfile.findUniqueOrThrow({ where: { id: profileId } });
-    expect(profile.pointsBalance).toBe(400 - reward.pointsCost);
-    expect(profile.protectedBalance).toBe(Math.min(300, profile.pointsBalance));
+    expect(profile.pointsBalance).toBe(250);
+    expect(await getProtectedBalance(profileId, profile.pointsBalance, activationMoment)).toBe(250);
   });
 });
 

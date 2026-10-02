@@ -3,6 +3,7 @@ import { Lock, Check } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { getCustomerProfileByUserId } from "@/server/services/customer-service";
 import { listActiveTiersCached, getEffectiveTier } from "@/server/services/tier-service";
+import { getLoyaltyConfigCached } from "@/server/services/config-service";
 import { BackHeader } from "@/components/shared/back-header";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { BrandIcon } from "@/components/shared/brand-icon";
@@ -15,8 +16,10 @@ export default async function TierPathPage() {
   if (!profile) return null;
 
   const tiers = await listActiveTiersCached();
-  const { progress, rollingPoints, frozen } = await getEffectiveTier(profile, tiers);
-  const achievedBasis = frozen ? (progress.currentTier?.minimumPoints ?? 0) : rollingPoints;
+  const config = await getLoyaltyConfigCached();
+  const activated = !!config.activationDate;
+  const { progress, rollingPoints } = await getEffectiveTier(profile, tiers);
+  const achievedBasis = activated ? rollingPoints : profile.lifetimePoints;
   const initials = `${profile.user.firstName[0]}${profile.user.lastName[0] ?? ""}`.toUpperCase();
 
   return (
@@ -24,12 +27,15 @@ export default async function TierPathPage() {
       <BackHeader title="Mi camino en Club Ciocolatto" />
 
       <p className="text-sm text-muted-foreground">
-        {frozen ? (
-          <>Tu nivel actual se mantiene hasta fin de año. A partir de 2027 se calcula con tus compras de los últimos 12 meses.</>
-        ) : (
+        {activated ? (
           <>
             Cada punto de compra cuenta. Llevás{" "}
             <span className="font-semibold text-foreground">{rollingPoints} puntos</span> en los últimos 12 meses.
+          </>
+        ) : (
+          <>
+            Cada punto cuenta, cada nivel te hace único. Llevás{" "}
+            <span className="font-semibold text-foreground">{profile.lifetimePoints} puntos</span> acumulados.
           </>
         )}
       </p>

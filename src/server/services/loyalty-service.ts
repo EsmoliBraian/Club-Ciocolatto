@@ -55,12 +55,6 @@ export async function awardPoints(
     ? Math.max(0, profile.lifetimePoints + input.amount)
     : profile.lifetimePoints;
 
-  // "Saldo protegido" (reglas 2026): nunca vence, pero si el saldo baja por
-  // debajo de lo protegido (un canje, un ajuste negativo), se achica junto
-  // con él — así cualquier vencimiento futuro siempre gasta primero los
-  // puntos nuevos, nunca los protegidos.
-  const newProtectedBalance = Math.min(profile.protectedBalance, newBalance);
-
   // El nivel ahora se basa en compras de los últimos 12 meses (o el nivel
   // congelado para socios existentes) — ver tier-service.ts. Solo una
   // compra puede moverlo, así que no vale la pena recalcularlo (ni pagar el
@@ -100,7 +94,6 @@ export async function awardPoints(
     data: {
       pointsBalance: newBalance,
       lifetimePoints: newLifetime,
-      protectedBalance: newProtectedBalance,
       ...(affectsTier ? { tierId: newTier?.tier?.id ?? null } : {}),
     },
   });
@@ -149,9 +142,8 @@ export async function awardPoints(
 }
 
 /** Rebuilds a customer's cached balance/lifetime points from the ledger — for audits or repairs.
- * Does NOT touch tierId/protectedBalance/legacyTierId — those aren't pure functions of the
- * ledger sum since reglas 2026 (tier depends on a rolling window + the legacy freeze; protected
- * balance is a floor set once at activation, not reconstructable from transactions alone). */
+ * Does NOT touch tierId — since reglas 2026 that's resolved live from a rolling window, not a
+ * pure function of the lifetime sum. */
 export async function reconcileCustomerBalance(customerProfileId: string, db: Db = prisma) {
   const transactions = await db.pointTransaction.findMany({
     where: { customerProfileId },
@@ -170,6 +162,28 @@ export async function reconcileCustomerBalance(customerProfileId: string, db: Db
       lifetimePoints: Math.max(0, lifetimePoints),
     },
   });
+}
+
+/**
+ * The portion of a customer's CURRENT balance that's protected from expiry (reglas 2026,
+ * regla 5.3: "los puntos que cada socio tiene al momento de la activación no vencen nunca").
+ * Derived entirely from the ledger — the balance as of the last transaction at-or-before
+ * `activationDate`, clamped to the current balance so it shrinks if they've since redeemed
+ * into it. No column to keep in sync and no one-time migration across every customer: a
+ * brand-new customer (nothing before activationDate) simply gets 0 protected.
+ */
+export async function getProtectedBalance(
+  customerProfileId: string,
+  currentBalance: number,
+  activationDate: Date,
+  db: Db = prisma
+): Promise<number> {
+  const lastBefore = await db.pointTransaction.findFirst({
+    where: { customerProfileId, createdAt: { lte: activationDate } },
+    orderBy: { createdAt: "desc" },
+  });
+  const balanceAtActivation = Math.max(0, lastBefore?.balanceAfter ?? 0);
+  return Math.min(balanceAtActivation, currentBalance);
 }
 
 export async function getPointsHistory(

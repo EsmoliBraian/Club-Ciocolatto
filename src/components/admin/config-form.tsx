@@ -128,8 +128,10 @@ export function ConfigForm({ config, tiers }: { config: LoyaltyConfig; tiers: Lo
               className="h-9 rounded-lg border border-input bg-transparent px-3 text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Al guardar esta fecha por primera vez, se congela de una sola vez el nivel y el
-              saldo protegido de todos los socios existentes. No se puede deshacer desde acá.
+              Desde este momento el nivel de todos los socios (nuevos y existentes) se calcula
+              por sus compras de los últimos 12 meses, no por puntos de por vida — puede subir o
+              bajar. Los puntos que ya tenían no vencen nunca; los que ganen de ahora en más sí,
+              según &ldquo;Puntos vencen a los (días)&rdquo;.
             </p>
           </div>
           <Field label="Días de gracia (catálogo viejo)" name="gracePeriodDays" type="number" defaultValue={config.gracePeriodDays} required />
