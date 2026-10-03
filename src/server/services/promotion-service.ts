@@ -19,3 +19,8 @@ export async function listUpcomingPromotionsForCustomer(db: Db = prisma) {
     orderBy: { startAt: "asc" },
   });
 }
+
+/** For the promo detail page — no active/date filtering, the page itself decides what to show for an expired/future promo. */
+export async function getPromotionById(id: string, db: Db = prisma) {
+  return db.promotion.findUnique({ where: { id }, include: { product: true } });
+}

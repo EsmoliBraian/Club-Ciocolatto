@@ -79,6 +79,34 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
             allowNone
           />
           <div className="flex flex-col gap-1.5">
+            <Label htmlFor="image">Imagen de fondo (opcional, para el carrusel del inicio)</Label>
+            {promotion?.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- admin preview thumbnail, not a customer-facing layout image
+              <img
+                src={promotion.imageUrl}
+                alt=""
+                className="h-20 w-full rounded-lg border border-border object-cover"
+              />
+            )}
+            <input
+              id="image"
+              name="image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="text-sm text-foreground file:mr-2 file:rounded-md file:border-0 file:bg-secondary file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-foreground"
+            />
+            <p className="text-xs text-muted-foreground">
+              Tamaño recomendado: 1200×480px (horizontal, proporción ~2.5:1). JPG, PNG o WEBP, máx 4MB. Se recorta
+              para cubrir el fondo de la tarjeta, el ícono y el título quedan siempre arriba.
+            </p>
+            {promotion?.imageUrl && (
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Checkbox name="removeImage" />
+                Quitar la imagen actual
+              </label>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">Descripción</Label>
             <Textarea id="description" name="description" defaultValue={promotion?.description ?? undefined} rows={2} />
           </div>
@@ -119,7 +147,7 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
           )}
           <Field label="Categoría (opcional)" name="category" defaultValue={promotion?.category ?? undefined} />
           <Field
-            label="Link al tocar la card (opcional, ej. WhatsApp)"
+            label='Link del botón "Enviar mensaje" en el detalle (opcional, ej. WhatsApp)'
             name="ctaUrl"
             placeholder="https://wa.me/..."
             defaultValue={promotion?.ctaUrl ?? undefined}

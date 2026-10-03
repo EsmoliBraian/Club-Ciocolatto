@@ -14,13 +14,13 @@ import { getSurveyStateForCustomer } from "@/server/services/survey-service";
 import { countUnreadNotifications } from "@/server/services/notification-service";
 import { listActivePromotionsForCustomer, listUpcomingPromotionsForCustomer } from "@/server/services/promotion-service";
 import { NotificationsButton } from "@/components/customer/notifications-button";
-import { BrandIcon } from "@/components/shared/brand-icon";
 import { TierProgressCard } from "@/components/customer/tier-progress-card";
 import { RedeemButton } from "@/components/customer/redeem-button";
 import { BirthdayBanner } from "@/components/customer/birthday-banner";
 import { AnniversaryBanner } from "@/components/customer/anniversary-banner";
 import { SurveyCard } from "@/components/customer/survey-card";
 import { MissionCard } from "@/components/customer/mission-card";
+import { PromoCarousel } from "@/components/customer/promo-carousel";
 import { TierBadgeButton } from "@/components/customer/tier-badge-button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -65,11 +65,11 @@ export default async function CustomerHomePage() {
 
   const initials = `${profile.user.firstName[0]}${profile.user.lastName[0] ?? ""}`.toUpperCase();
 
-  // Active takes priority (it's actionable right now); otherwise tease the
-  // soonest upcoming one. Hidden entirely when there's nothing to show —
+  // Active promos take priority (they're actionable right now); otherwise
+  // tease the upcoming ones. Hidden entirely when there's nothing to show —
   // no empty/irrelevant banner.
-  const featuredPromo = activePromos[0] ?? upcomingPromos[0];
-  const promoIsActive = !!activePromos[0];
+  const carouselPromos = activePromos.length > 0 ? activePromos : upcomingPromos;
+  const promoIsActive = activePromos.length > 0;
 
   return (
     <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 pt-6">
@@ -118,25 +118,7 @@ export default async function CustomerHomePage() {
         <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
       </Link>
 
-      {featuredPromo && (
-        <Link
-          href={featuredPromo.ctaUrl ?? "/promociones"}
-          target={featuredPromo.ctaUrl ? "_blank" : undefined}
-          rel={featuredPromo.ctaUrl ? "noopener noreferrer" : undefined}
-          className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-sm transition-colors hover:bg-primary/15"
-        >
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <BrandIcon emoji={featuredPromo.icon ?? "🎉"} size={20} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              {promoIsActive ? "Promoción activa" : "Próximamente"}
-            </p>
-            <p className="truncate font-heading font-semibold text-foreground">{featuredPromo.name}</p>
-          </div>
-          <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
-        </Link>
-      )}
+      {carouselPromos.length > 0 && <PromoCarousel promos={carouselPromos} isActive={promoIsActive} />}
 
       {surveyState.question && !surveyState.alreadyAnswered && <SurveyCard question={surveyState.question} />}
 

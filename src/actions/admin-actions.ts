@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { put, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ADMIN_ROLES } from "@/lib/rbac";
 import { recordAuditLog } from "@/server/services/audit-service";
@@ -318,6 +319,9 @@ export async function toggleRewardActiveAction(id: string, active: boolean) {
 
 // ── Promotions ───────────────────────────────────────────────────────────
 
+const ALLOWED_PROMO_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_PROMO_IMAGE_BYTES = 4 * 1024 * 1024;
+
 export async function savePromotionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const actor = await requireRole(...ADMIN_ROLES);
   const id = optionalString(formData, "id");
@@ -345,16 +349,43 @@ export async function savePromotionAction(_prev: ActionState, formData: FormData
     return { error: "Revisá los datos.", fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
+  const image = formData.get("image");
+  const removeImage = checkbox(formData, "removeImage");
+  let imageUrl: string | null | undefined; // undefined = leave the existing value untouched
+  if (image instanceof File && image.size > 0) {
+    if (!ALLOWED_PROMO_IMAGE_TYPES.has(image.type)) {
+      return { error: "La imagen de fondo debe ser JPG, PNG o WEBP." };
+    }
+    if (image.size > MAX_PROMO_IMAGE_BYTES) {
+      return { error: "La imagen de fondo no puede pesar más de 4MB." };
+    }
+    const ext = image.type.split("/")[1];
+    const blob = await put(`promotions/${id ?? "new"}-${Date.now()}.${ext}`, image, {
+      access: "public",
+      addRandomSuffix: false,
+    });
+    imageUrl = blob.url;
+  } else if (removeImage) {
+    imageUrl = null;
+  }
+
   const { startTime, endTime, ...promotionRest } = parsed.data;
   const promotionData = {
     ...promotionRest,
     startMinute: startTime ? timeToMinutes(startTime) : null,
     endMinute: endTime ? timeToMinutes(endTime) : null,
+    ...(imageUrl !== undefined ? { imageUrl } : {}),
   };
+
+  const previous = id ? await prisma.promotion.findUnique({ where: { id }, select: { imageUrl: true } }) : null;
 
   const promotion = id
     ? await prisma.promotion.update({ where: { id }, data: promotionData })
     : await prisma.promotion.create({ data: promotionData });
+
+  if (imageUrl !== undefined && previous?.imageUrl && previous.imageUrl !== imageUrl) {
+    await del(previous.imageUrl).catch(() => {});
+  }
 
   await recordAuditLog({
     actorId: actor.id,

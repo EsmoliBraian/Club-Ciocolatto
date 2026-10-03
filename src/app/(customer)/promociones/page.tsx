@@ -1,34 +1,15 @@
 import type { Metadata } from "next";
-import { Sparkles, Percent, Gift, Coins } from "lucide-react";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { differenceInCalendarDays } from "date-fns";
 import {
   listActivePromotionsForCustomer,
   listUpcomingPromotionsForCustomer,
 } from "@/server/services/promotion-service";
 import { BrandIcon } from "@/components/shared/brand-icon";
+import { PROMO_TYPE_ICON, promoBadgeLabel } from "@/lib/promo-badge";
 
 export const metadata: Metadata = { title: "Promociones" };
-
-const TYPE_ICON: Record<string, typeof Sparkles> = {
-  POINTS_MULTIPLIER: Coins,
-  BONUS_POINTS: Gift,
-  DISCOUNT: Percent,
-};
-
-/** null when the promo's type-specific field isn't set (e.g. a purely
- * informational promo like "Día de la Madre") — no numeric badge to show. */
-function promoBadgeLabel(promo: { type: string; multiplier: unknown; bonusPoints: number | null; discountPct: unknown }): string | null {
-  switch (promo.type) {
-    case "POINTS_MULTIPLIER":
-      return promo.multiplier != null ? `x${promo.multiplier} puntos` : null;
-    case "BONUS_POINTS":
-      return promo.bonusPoints != null ? `+${promo.bonusPoints} puntos extra` : null;
-    case "DISCOUNT":
-      return promo.discountPct != null ? `${promo.discountPct}% de descuento` : null;
-    default:
-      return null;
-  }
-}
 
 export default async function PromotionsPage() {
   const [promotions, upcoming] = await Promise.all([
@@ -53,11 +34,15 @@ export default async function PromotionsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {promotions.map((promo) => {
-            const Icon = TYPE_ICON[promo.type] ?? Sparkles;
+            const Icon = PROMO_TYPE_ICON[promo.type] ?? Sparkles;
             const badgeLabel = promoBadgeLabel(promo);
             const daysLeft = differenceInCalendarDays(promo.endAt, now);
-            const cardContent = (
-              <>
+            return (
+              <Link
+                key={promo.id}
+                href={`/promociones/${promo.id}`}
+                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted"
+              >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
                   {promo.icon ? <BrandIcon emoji={promo.icon} size={20} /> : <Icon className="size-5" />}
                 </span>
@@ -80,17 +65,7 @@ export default async function PromotionsPage() {
                     </span>
                   </div>
                 </div>
-              </>
-            );
-            const cardClassName = "flex items-start gap-3 rounded-2xl border border-border bg-card p-4";
-            return promo.ctaUrl ? (
-              <a key={promo.id} href={promo.ctaUrl} target="_blank" rel="noopener noreferrer" className={cardClassName}>
-                {cardContent}
-              </a>
-            ) : (
-              <div key={promo.id} className={cardClassName}>
-                {cardContent}
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -100,12 +75,13 @@ export default async function PromotionsPage() {
         <div className="flex flex-col gap-3">
           <p className="font-heading font-semibold text-foreground">Próximamente</p>
           {upcoming.map((promo) => {
-            const Icon = TYPE_ICON[promo.type] ?? Sparkles;
+            const Icon = PROMO_TYPE_ICON[promo.type] ?? Sparkles;
             const daysUntil = differenceInCalendarDays(promo.startAt, now);
             return (
-              <div
+              <Link
                 key={promo.id}
-                className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-4 opacity-80"
+                href={`/promociones/${promo.id}`}
+                className="flex items-start gap-3 rounded-2xl border border-dashed border-border bg-card p-4 opacity-80 transition-colors hover:bg-muted"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
                   {promo.icon ? <BrandIcon emoji={promo.icon} size={20} /> : <Icon className="size-5" />}
@@ -119,7 +95,7 @@ export default async function PromotionsPage() {
                     {daysUntil <= 0 ? "Empieza hoy" : daysUntil === 1 ? "Empieza mañana" : `Empieza en ${daysUntil} días`}
                   </span>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

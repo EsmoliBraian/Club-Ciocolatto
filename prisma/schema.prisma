@@ -495,10 +495,13 @@ model Promotion {
   name        String
   description String?
   icon        String? // emoji key into BRAND_ICON_OPTIONS — shown on the home banner and /promociones instead of the generic per-type icon
-  // Optional external link (e.g. a wa.me URL) — when set, the promo card on
-  // the home banner and /promociones becomes clickable and opens this
-  // instead of just linking to /promociones. For campaigns fulfilled outside
-  // the app (e.g. "encargá la caja por WhatsApp"), not a mechanical effect.
+  // Optional background image (Vercel Blob URL) for the home carousel slide
+  // — rendered behind a dark gradient so the icon/title stay legible.
+  imageUrl    String?
+  // Optional external link (e.g. a wa.me URL) — shown as a "Enviar mensaje"
+  // button on the promo's detail page (/promociones/[id]). For campaigns
+  // fulfilled outside the app (e.g. "encargá la caja por WhatsApp"), not a
+  // mechanical effect.
   ctaUrl      String?
   type        PromotionType
   multiplier  Decimal?      @db.Decimal(4, 2) // POINTS_MULTIPLIER
