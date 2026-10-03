@@ -34,8 +34,13 @@ export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; i
   const [isDragging, setIsDragging] = useState(false);
   const [dragPercent, setDragPercent] = useState(0);
   const draggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const widthRef = useRef(1);
+  // The actual drag gate lives in a ref, not the `isDragging` state above:
+  // on a phone, touchmove fires in rapid bursts and several events land
+  // before React re-renders with a fresh closure, so a state-based check
+  // here silently drops them (confirmed — worked with a mouse, not on
+  // touch). A ref is read synchronously and is never stale. `isDragging`
+  // state still exists purely to drive the transition/auto-advance pause.
+  const gestureRef = useRef<{ startX: number; width: number; lastPercent: number } | null>(null);
 
   const realIndex = hasClones ? (((position - 1) % promos.length) + promos.length) % promos.length : 0;
 
@@ -57,25 +62,28 @@ export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; i
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (extended.length <= 1) return;
     draggingRef.current = false;
-    startXRef.current = e.clientX;
-    widthRef.current = e.currentTarget.clientWidth || 1;
+    gestureRef.current = { startX: e.clientX, width: e.currentTarget.clientWidth || 1, lastPercent: 0 };
     setIsDragging(true);
     e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDragging) return;
-    const deltaX = e.clientX - startXRef.current;
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    const deltaX = e.clientX - gesture.startX;
     if (Math.abs(deltaX) > DRAG_TAP_THRESHOLD_PX) draggingRef.current = true;
-    setDragPercent((deltaX / widthRef.current) * 100);
+    gesture.lastPercent = (deltaX / gesture.width) * 100;
+    setDragPercent(gesture.lastPercent);
   }
 
   function endDrag() {
-    if (!isDragging) return;
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    gestureRef.current = null;
     setIsDragging(false);
-    if (dragPercent <= -SWIPE_THRESHOLD_PCT) {
+    if (gesture.lastPercent <= -SWIPE_THRESHOLD_PCT) {
       setPosition((p) => p + 1);
-    } else if (dragPercent >= SWIPE_THRESHOLD_PCT) {
+    } else if (gesture.lastPercent >= SWIPE_THRESHOLD_PCT) {
       setPosition((p) => p - 1);
     }
     setDragPercent(0);
@@ -99,7 +107,6 @@ export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; i
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onPointerLeave={endDrag}
       >
         <div
           className="flex select-none"
