@@ -46,6 +46,8 @@ export interface RewardEligibility {
   availableAgainAt?: Date;
   /** Only set when reason is VISITS_REQUIRED — for "Llevás X de Y" progress copy. */
   visitsSoFar?: number;
+  /** Only set when reason is TIER_REQUIRED — for the "?" explanation copy. */
+  requiredTierName?: string;
 }
 
 export async function listRewardsForCustomer(
@@ -84,7 +86,12 @@ export async function listRewardsForCustomer(
     if (reward.requiredTierId) {
       const requiredRank = tiers.findIndex((t) => t.id === reward.requiredTierId);
       if (requiredRank === -1 || customerTierRank < requiredRank) {
-        return { reward, eligible: false, reason: "TIER_REQUIRED" as const };
+        return {
+          reward,
+          eligible: false,
+          reason: "TIER_REQUIRED" as const,
+          requiredTierName: tiers[requiredRank]?.name,
+        };
       }
     }
     if (reward.minimumVisits != null && visits < reward.minimumVisits) {
