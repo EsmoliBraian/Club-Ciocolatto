@@ -495,6 +495,11 @@ model Promotion {
   name        String
   description String?
   icon        String? // emoji key into BRAND_ICON_OPTIONS — shown on the home banner and /promociones instead of the generic per-type icon
+  // Optional external link (e.g. a wa.me URL) — when set, the promo card on
+  // the home banner and /promociones becomes clickable and opens this
+  // instead of just linking to /promociones. For campaigns fulfilled outside
+  // the app (e.g. "encargá la caja por WhatsApp"), not a mechanical effect.
+  ctaUrl      String?
   type        PromotionType
   multiplier  Decimal?      @db.Decimal(4, 2) // POINTS_MULTIPLIER
   bonusPoints Int? // BONUS_POINTS
@@ -590,7 +595,7 @@ model LoyaltyConfig {
   // del ledger — no es una columna). 180 ≈ 6 meses.
   pointsExpireAfterDays      Int?
   redemptionCodeExpiryHours  Int          @default(72)
-  rewardCooldownDays         Int?         @default(30) // null = no cooldown; days before a customer can redeem the SAME reward again
+  rewardCooldownDays         Int?         // null = no cooldown; days before a customer can redeem the SAME reward again
   anniversaryPoints          Int          @default(150)
   profileCompletionPoints    Int          @default(50)
   surveyQuestion             String? // null = survey feature off

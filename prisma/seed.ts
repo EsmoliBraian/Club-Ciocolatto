@@ -7,7 +7,12 @@ import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../src/lib/password";
 import { buildReferralCodeCandidate, generateQrToken } from "../src/lib/codes";
-import { BIRTHDAY_COFFEE_REWARD_ID, ANNIVERSARY_GIFT_REWARD_ID, WINBACK_COUPON_REWARD_ID } from "../src/lib/constants";
+import {
+  BIRTHDAY_COFFEE_REWARD_ID,
+  ANNIVERSARY_GIFT_REWARD_ID,
+  WINBACK_COUPON_REWARD_ID,
+  FREE_COFFEE_CHOICE_REWARD_ID,
+} from "../src/lib/constants";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -36,6 +41,7 @@ async function main() {
       birthdayPoints: 100,
       referralSponsorPoints: 0,
       referralRefereePoints: 100,
+      rewardCooldownDays: null,
       redemptionCodeExpiryHours: 72,
       businessName: "Ciocolatto",
       contactEmail: "hola@ciocolatto.com",
@@ -274,21 +280,42 @@ async function main() {
         active: true,
       },
     }),
+    prisma.reward.upsert({
+      where: { id: FREE_COFFEE_CHOICE_REWARD_ID },
+      update: { icon: "☕" },
+      create: {
+        id: FREE_COFFEE_CHOICE_REWARD_ID,
+        name: "Café gratis a elección",
+        description: "Tu café favorito gratis, por tu fidelidad.",
+        icon: "☕",
+        category: "PRODUCT",
+        pointsCost: 0,
+        hidden: true, // granted automatically by "Misión Café" — never shown in the store
+        perUserLimit: null,
+        active: true,
+      },
+    }),
   ]);
 
   await Promise.all([
     prisma.mission.upsert({
       where: { id: "seed-mission-cafe" },
-      update: {},
+      update: {
+        description: "Comprá 6 cafés y el próximo es gratis, a tu elección.",
+        targetValue: 6,
+        rewardPoints: 0,
+        rewardId: FREE_COFFEE_CHOICE_REWARD_ID,
+      },
       create: {
         id: "seed-mission-cafe",
         name: "Misión Café",
-        description: "Comprá 5 cafés y ganá puntos extra.",
+        description: "Comprá 6 cafés y el próximo es gratis, a tu elección.",
         icon: "☕",
         type: "PRODUCT_PURCHASE",
-        targetValue: 5,
+        targetValue: 6,
         productId: cafe.id,
-        rewardPoints: 50,
+        rewardPoints: 0,
+        rewardId: FREE_COFFEE_CHOICE_REWARD_ID,
         perUserLimit: 12,
         active: true,
       },
@@ -397,7 +424,10 @@ async function main() {
 
   // Puntos dobles los días de menor venta (reglas 2026) — recurrente, sin
   // fecha de fin real (10 años). No se acumula con el multiplicador de
-  // nivel: order-service.ts aplica el mayor de los dos.
+  // nivel: order-service.ts aplica el mayor de los dos. listActivePromotionsForCustomer
+  // ordena por endAt ascendente, así que cualquier evento puntual con un
+  // endAt más cercano (ej. Día de la Madre) pasa a primer plano y este
+  // queda automáticamente en segundo plano, sin tocar nada acá.
   await prisma.promotion.upsert({
     where: { id: "seed-promo-dobles-mie-jue" },
     update: {},
@@ -411,6 +441,27 @@ async function main() {
       daysOfWeek: [3, 4],
       startAt: new Date(),
       endAt: new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000),
+      active: true,
+    },
+  });
+
+  // Día de la Madre — 100% informativa/externa: el canje real se coordina
+  // por WhatsApp, no hay descuento ni puntos automáticos acá. ctaUrl hace
+  // que la card sea clickeable en vez de solo llevar a /promociones.
+  await prisma.promotion.upsert({
+    where: { id: "seed-promo-dia-de-la-madre" },
+    update: {},
+    create: {
+      id: "seed-promo-dia-de-la-madre",
+      name: "Día de la Madre",
+      description: "Encargando la caja para el día de la madre, te damos un cupón de 1 café gratis.",
+      icon: "☕",
+      type: "BONUS_POINTS",
+      startAt: new Date(),
+      endAt: new Date("2026-10-19T02:59:59Z"),
+      ctaUrl: `https://wa.me/5492914636722?text=${encodeURIComponent(
+        "Vengo de Club Ciocolatto, me interesa encargar el box para el día de la madre"
+      )}`,
       active: true,
     },
   });

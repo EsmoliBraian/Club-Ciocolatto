@@ -118,6 +118,12 @@ export function PromotionFormDialog({ promotion }: { promotion?: Promotion }) {
             />
           )}
           <Field label="Categoría (opcional)" name="category" defaultValue={promotion?.category ?? undefined} />
+          <Field
+            label="Link al tocar la card (opcional, ej. WhatsApp)"
+            name="ctaUrl"
+            placeholder="https://wa.me/..."
+            defaultValue={promotion?.ctaUrl ?? undefined}
+          />
           <div className="grid grid-cols-2 gap-3">
             <Field label="Desde" name="startAt" type="date" defaultValue={toDateInput(promotion?.startAt)} required />
             <Field label="Hasta" name="endAt" type="date" defaultValue={toDateInput(promotion?.endAt)} required />

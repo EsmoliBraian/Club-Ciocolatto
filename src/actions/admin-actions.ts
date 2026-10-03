@@ -327,6 +327,7 @@ export async function savePromotionAction(_prev: ActionState, formData: FormData
     description: formData.get("description"),
     icon: optionalString(formData, "icon"),
     type: formData.get("type"),
+    ctaUrl: optionalString(formData, "ctaUrl"),
     multiplier: optionalString(formData, "multiplier"),
     bonusPoints: optionalString(formData, "bonusPoints"),
     discountPct: optionalString(formData, "discountPct"),

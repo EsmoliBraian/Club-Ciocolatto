@@ -98,6 +98,12 @@ export const promotionSchema = z.object({
     .optional()
     .transform((v) => v ?? null), // explicit null (not undefined) so clearing it back to "default" actually clears the column on update
   type: promotionTypeEnum,
+  ctaUrl: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || /^https?:\/\//.test(v), "Debe ser una URL (http/https)")
+    .transform((v) => (v ? v : null)),
   multiplier: z.coerce.number().min(1).optional(),
   bonusPoints: z.coerce.number().int().min(0).optional(),
   discountPct: z.coerce.number().min(0).max(100).optional(),

@@ -69,24 +69,33 @@ describe("reward-service", () => {
     ).rejects.toMatchObject({ code: "ALREADY_USED" });
   });
 
-  it("blocks re-redeeming the same reward within the cooldown window, even with perUserLimit null", async () => {
+  it("blocks re-redeeming the same reward within the cooldown window, when the admin opts into one", async () => {
+    // rewardCooldownDays defaults to null (no cooldown) since the 2026 rules
+    // dropped it — this test exercises an admin who explicitly re-enables it.
     await prisma.reward.update({ where: { id: rewardId }, data: { perUserLimit: null } });
     await awardPoints(
       { customerProfileId: profileId, type: "EARN", source: "PURCHASE", amount: 500, description: "Compra" },
       prisma
     );
 
-    await prisma.$transaction((tx) => redeemReward(tx, { customerProfileId: profileId, rewardId }));
+    const real = await configService.getLoyaltyConfig();
+    const spy = vi.spyOn(configService, "getLoyaltyConfig").mockResolvedValue({ ...real, rewardCooldownDays: 30 });
 
-    await expect(
-      prisma.$transaction((tx) => redeemReward(tx, { customerProfileId: profileId, rewardId }))
-    ).rejects.toMatchObject({ code: "COOLDOWN_ACTIVE" });
+    try {
+      await prisma.$transaction((tx) => redeemReward(tx, { customerProfileId: profileId, rewardId }));
 
-    const eligibility = await listRewardsForCustomer(profileId);
-    const entry = eligibility.find((e) => e.reward.id === rewardId);
-    expect(entry?.eligible).toBe(false);
-    expect(entry?.reason).toBe("COOLDOWN_ACTIVE");
-    expect(entry?.availableAgainAt).toBeInstanceOf(Date);
+      await expect(
+        prisma.$transaction((tx) => redeemReward(tx, { customerProfileId: profileId, rewardId }))
+      ).rejects.toMatchObject({ code: "COOLDOWN_ACTIVE" });
+
+      const eligibility = await listRewardsForCustomer(profileId);
+      const entry = eligibility.find((e) => e.reward.id === rewardId);
+      expect(entry?.eligible).toBe(false);
+      expect(entry?.reason).toBe("COOLDOWN_ACTIVE");
+      expect(entry?.availableAgainAt).toBeInstanceOf(Date);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("skips the cooldown entirely when rewardCooldownDays is null", async () => {

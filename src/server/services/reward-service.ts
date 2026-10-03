@@ -375,6 +375,8 @@ export async function grantFreeReward(
     notificationBody: string;
     /** Overrides config.redemptionCodeExpiryHours — for grants with their own validity window (e.g. the win-back coupon). */
     expiresInHours?: number;
+    /** Skip this function's own notification — for callers that already send a more specific one (e.g. mission completion). */
+    silent?: boolean;
   }
 ): Promise<RedeemRewardResult & { id: string }> {
   const [reward, profile, config] = [
@@ -398,10 +400,12 @@ export async function grantFreeReward(
     },
   });
 
-  await notify(
-    { userId: profile.userId, type: "REWARD_UNLOCKED", title: params.notificationTitle, body: params.notificationBody },
-    db
-  );
+  if (!params.silent) {
+    await notify(
+      { userId: profile.userId, type: "REWARD_UNLOCKED", title: params.notificationTitle, body: params.notificationBody },
+      db
+    );
+  }
 
   return { id: redemption.id, redemptionCode, expiresAt, pointsRemaining: profile.pointsBalance };
 }

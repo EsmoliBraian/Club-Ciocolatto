@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Db } from "@/types/db";
 import type { Mission, MissionProgress } from "@prisma/client";
 import { awardPoints } from "@/server/services/loyalty-service";
+import { grantFreeReward } from "@/server/services/reward-service";
 import { notify } from "@/server/services/notification-service";
 
 const ORDER_DRIVEN_TYPES = [
@@ -162,13 +163,27 @@ async function claimMissionReward(
     );
   }
 
+  // A mission can grant a Reward outright instead of (or alongside) points —
+  // e.g. "comprá 6 cafés y el próximo es gratis". Silenced: the combined
+  // notify() below covers it, so the customer doesn't get two pushes.
+  if (mission.rewardId) {
+    await grantFreeReward(db, {
+      customerProfileId,
+      rewardId: mission.rewardId,
+      notificationTitle: "¡Misión completada! 🔥",
+      notificationBody: mission.name,
+      silent: true,
+    });
+  }
+
   await notify(
     {
       userId: profile.userId,
       type: "MISSION_COMPLETED",
       title: "¡Misión completada! 🔥",
-      body:
-        mission.rewardPoints > 0
+      body: mission.rewardId
+        ? `${mission.name}: ya podés canjear tu premio.`
+        : mission.rewardPoints > 0
           ? `${mission.name}: +${mission.rewardPoints} puntos`
           : mission.name,
     },

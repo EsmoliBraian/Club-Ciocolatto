@@ -120,7 +120,9 @@ export default async function CustomerHomePage() {
 
       {featuredPromo && (
         <Link
-          href="/promociones"
+          href={featuredPromo.ctaUrl ?? "/promociones"}
+          target={featuredPromo.ctaUrl ? "_blank" : undefined}
+          rel={featuredPromo.ctaUrl ? "noopener noreferrer" : undefined}
           className="flex items-center gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-sm transition-colors hover:bg-primary/15"
         >
           <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">

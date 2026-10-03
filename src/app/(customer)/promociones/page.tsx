@@ -9,20 +9,26 @@ import { BrandIcon } from "@/components/shared/brand-icon";
 
 export const metadata: Metadata = { title: "Promociones" };
 
-const TYPE_META: Record<string, { icon: typeof Sparkles; label: (p: { multiplier: unknown; bonusPoints: number | null; discountPct: unknown }) => string }> = {
-  POINTS_MULTIPLIER: {
-    icon: Coins,
-    label: (p) => `x${p.multiplier} puntos`,
-  },
-  BONUS_POINTS: {
-    icon: Gift,
-    label: (p) => `+${p.bonusPoints} puntos extra`,
-  },
-  DISCOUNT: {
-    icon: Percent,
-    label: (p) => `${p.discountPct}% de descuento`,
-  },
+const TYPE_ICON: Record<string, typeof Sparkles> = {
+  POINTS_MULTIPLIER: Coins,
+  BONUS_POINTS: Gift,
+  DISCOUNT: Percent,
 };
+
+/** null when the promo's type-specific field isn't set (e.g. a purely
+ * informational promo like "Día de la Madre") — no numeric badge to show. */
+function promoBadgeLabel(promo: { type: string; multiplier: unknown; bonusPoints: number | null; discountPct: unknown }): string | null {
+  switch (promo.type) {
+    case "POINTS_MULTIPLIER":
+      return promo.multiplier != null ? `x${promo.multiplier} puntos` : null;
+    case "BONUS_POINTS":
+      return promo.bonusPoints != null ? `+${promo.bonusPoints} puntos extra` : null;
+    case "DISCOUNT":
+      return promo.discountPct != null ? `${promo.discountPct}% de descuento` : null;
+    default:
+      return null;
+  }
+}
 
 export default async function PromotionsPage() {
   const [promotions, upcoming] = await Promise.all([
@@ -47,14 +53,11 @@ export default async function PromotionsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {promotions.map((promo) => {
-            const meta = TYPE_META[promo.type];
-            const Icon = meta?.icon ?? Sparkles;
+            const Icon = TYPE_ICON[promo.type] ?? Sparkles;
+            const badgeLabel = promoBadgeLabel(promo);
             const daysLeft = differenceInCalendarDays(promo.endAt, now);
-            return (
-              <div
-                key={promo.id}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-4"
-              >
+            const cardContent = (
+              <>
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
                   {promo.icon ? <BrandIcon emoji={promo.icon} size={20} /> : <Icon className="size-5" />}
                 </span>
@@ -64,9 +67,9 @@ export default async function PromotionsPage() {
                     <p className="mt-0.5 text-sm text-muted-foreground">{promo.description}</p>
                   )}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {meta && (
+                    {badgeLabel && (
                       <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-primary">
-                        {meta.label(promo)}
+                        {badgeLabel}
                       </span>
                     )}
                     {promo.product && (
@@ -77,6 +80,16 @@ export default async function PromotionsPage() {
                     </span>
                   </div>
                 </div>
+              </>
+            );
+            const cardClassName = "flex items-start gap-3 rounded-2xl border border-border bg-card p-4";
+            return promo.ctaUrl ? (
+              <a key={promo.id} href={promo.ctaUrl} target="_blank" rel="noopener noreferrer" className={cardClassName}>
+                {cardContent}
+              </a>
+            ) : (
+              <div key={promo.id} className={cardClassName}>
+                {cardContent}
               </div>
             );
           })}
@@ -87,8 +100,7 @@ export default async function PromotionsPage() {
         <div className="flex flex-col gap-3">
           <p className="font-heading font-semibold text-foreground">Próximamente</p>
           {upcoming.map((promo) => {
-            const meta = TYPE_META[promo.type];
-            const Icon = meta?.icon ?? Sparkles;
+            const Icon = TYPE_ICON[promo.type] ?? Sparkles;
             const daysUntil = differenceInCalendarDays(promo.startAt, now);
             return (
               <div

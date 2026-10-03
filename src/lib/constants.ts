@@ -20,6 +20,9 @@ export const ANNIVERSARY_GIFT_REWARD_ID = "seed-reward-anniversary-gift";
 /** Stable id of the seeded, hidden "win-back coupon" Reward — granted automatically, never listed in the store. */
 export const WINBACK_COUPON_REWARD_ID = "seed-reward-winback-coupon";
 
+/** Stable id of the seeded, hidden "free coffee of choice" Reward — granted automatically by the "Misión Café" mission, never listed in the store. */
+export const FREE_COFFEE_CHOICE_REWARD_ID = "seed-reward-cafe-eleccion";
+
 /** Weekly visit-streak milestones: consecutive weeks with at least one QUALIFYING visit (order ≥ LoyaltyConfig.visitMinimumAmount) → bonus points, paid once per milestone. */
 export const VISIT_STREAK_MILESTONES = [
   { weeks: 4, points: 25 },
