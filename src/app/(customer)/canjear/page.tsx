@@ -6,7 +6,6 @@ import { listRewardsForCustomer, type RewardEligibility } from "@/server/service
 import { formatDate } from "@/lib/format";
 import { BrandIcon } from "@/components/shared/brand-icon";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { RedeemButton } from "@/components/customer/redeem-button";
@@ -102,7 +101,7 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
   return (
     <div className="grid grid-cols-2 gap-3">
       {items.map((item) => {
-        const { reward, eligible, reason, availableAgainAt, visitsSoFar } = item;
+        const { reward, eligible, reason, availableAgainAt } = item;
         return (
           <div
             key={reward.id}
@@ -119,14 +118,6 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
               )}
             </div>
             <p className="text-xs font-semibold text-muted-foreground">{reward.pointsCost} pts</p>
-            {reason === "VISITS_REQUIRED" && reward.minimumVisits != null && (
-              <div className="flex flex-col gap-1">
-                <Progress value={((visitsSoFar ?? 0) / reward.minimumVisits) * 100} />
-                <p className="text-[11px] text-muted-foreground">
-                  Se desbloquea con {reward.minimumVisits} visitas. Llevás {visitsSoFar ?? 0} de {reward.minimumVisits}.
-                </p>
-              </div>
-            )}
             {eligible ? (
               <RedeemButton
                 rewardId={reward.id}
@@ -136,19 +127,26 @@ function RewardGrid({ items, pointsBalance }: { items: RewardEligibility[]; poin
                 size="sm"
               />
             ) : (
-              <div className="flex items-center gap-1.5">
-                <Button size="sm" variant="outline" disabled className="flex-1 text-muted-foreground opacity-70">
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled
+                  className="min-w-0 flex-1 shrink justify-start text-muted-foreground opacity-70"
+                >
                   <Lock className="size-3" />
-                  {reason === "COOLDOWN_ACTIVE" && availableAgainAt
-                    ? `Disponible el ${formatDate(availableAgainAt)}`
-                    : reason
-                      ? (REASON_LABEL[reason] ?? "No disponible")
-                      : "No disponible"}
+                  <span className="min-w-0 truncate">
+                    {reason === "COOLDOWN_ACTIVE" && availableAgainAt
+                      ? `Disponible el ${formatDate(availableAgainAt)}`
+                      : reason
+                        ? (REASON_LABEL[reason] ?? "No disponible")
+                        : "No disponible"}
+                  </span>
                 </Button>
-                {reason && reason !== "VISITS_REQUIRED" && (
+                {reason && (
                   <Popover>
                     <PopoverTrigger
-                      render={<Button size="icon-sm" variant="ghost" aria-label="¿Cuándo se desbloquea?" />}
+                      render={<Button size="icon-sm" variant="ghost" className="shrink-0" aria-label="¿Cuándo se desbloquea?" />}
                     >
                       <HelpCircle className="size-4 text-muted-foreground" />
                     </PopoverTrigger>
