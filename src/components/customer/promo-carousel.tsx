@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { BrandIcon } from "@/components/shared/brand-icon";
@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 const ROTATE_MS = 3000;
 const TRANSITION_MS = 500;
+/** Minimum drag distance, as a % of the slide's width, before a release counts as a swipe instead of snapping back. */
+const SWIPE_THRESHOLD_PCT = 15;
+/** Minimum pointer movement in px before a gesture counts as a drag — below this it's treated as a tap (lets the Link navigate). */
+const DRAG_TAP_THRESHOLD_PX = 8;
 
 export interface CarouselPromo {
   id: string;
@@ -17,22 +21,32 @@ export interface CarouselPromo {
   imageUrl: string | null;
 }
 
-/** Auto-advancing banner for /inicio — rotates through every active (or, if
- * none, upcoming) promo every 3s. Clicking a slide goes to its detail page
- * instead of acting directly, so a promo like "Día de la Madre" can explain
- * itself before the "Enviar mensaje" CTA on that page. */
+/** Auto-advancing, swipeable banner for /inicio — rotates through every
+ * active (or, if none, upcoming) promo every 3s and loops infinitely in
+ * either direction. Clicking (or tapping without dragging) a slide goes to
+ * its detail page instead of acting directly, so a promo like "Día de la
+ * Madre" can explain itself before the "Enviar mensaje" CTA on that page. */
 export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; isActive: boolean }) {
-  const [index, setIndex] = useState(0);
+  const hasClones = promos.length > 1;
+  const extended = hasClones ? [promos[promos.length - 1], ...promos, promos[0]] : promos;
+  const [position, setPosition] = useState(hasClones ? 1 : 0);
   const [noTransition, setNoTransition] = useState(false);
-  const loop = promos.length > 1;
-  const slides = loop ? [...promos, promos[0]] : promos;
-  const isCloneFrame = loop && index === slides.length - 1;
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragPercent, setDragPercent] = useState(0);
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const widthRef = useRef(1);
 
+  const realIndex = hasClones ? (((position - 1) % promos.length) + promos.length) % promos.length : 0;
+
+  // Reschedules on every position change (auto or manual swipe) so a swipe
+  // always buys a full, calm 3s before the next auto-advance — and pauses
+  // entirely while the user is actively dragging.
   useEffect(() => {
-    if (!loop) return;
-    const id = setInterval(() => setIndex((i) => i + 1), ROTATE_MS);
-    return () => clearInterval(id);
-  }, [loop]);
+    if (!hasClones || isDragging) return;
+    const t = setTimeout(() => setPosition((p) => p + 1), ROTATE_MS);
+    return () => clearTimeout(t);
+  }, [hasClones, isDragging, position]);
 
   useEffect(() => {
     if (!noTransition) return;
@@ -40,31 +54,81 @@ export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; i
     return () => cancelAnimationFrame(raf);
   }, [noTransition]);
 
+  function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (extended.length <= 1) return;
+    draggingRef.current = false;
+    startXRef.current = e.clientX;
+    widthRef.current = e.currentTarget.clientWidth || 1;
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!isDragging) return;
+    const deltaX = e.clientX - startXRef.current;
+    if (Math.abs(deltaX) > DRAG_TAP_THRESHOLD_PX) draggingRef.current = true;
+    setDragPercent((deltaX / widthRef.current) * 100);
+  }
+
+  function endDrag() {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (dragPercent <= -SWIPE_THRESHOLD_PCT) {
+      setPosition((p) => p + 1);
+    } else if (dragPercent >= SWIPE_THRESHOLD_PCT) {
+      setPosition((p) => p - 1);
+    }
+    setDragPercent(0);
+  }
+
+  function handleSlideClick(e: React.MouseEvent) {
+    if (draggingRef.current) {
+      e.preventDefault();
+      draggingRef.current = false;
+    }
+  }
+
+  const totalPercent = -(position * 100) + dragPercent;
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="overflow-hidden rounded-2xl">
+      <div
+        className="overflow-hidden rounded-2xl"
+        style={{ touchAction: "pan-y" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={endDrag}
+      >
         <div
-          className="flex"
+          className="flex select-none"
           style={{
-            transform: `translateX(-${index * 100}%)`,
-            transition: noTransition ? "none" : `transform ${TRANSITION_MS}ms ease`,
+            transform: `translateX(${totalPercent}%)`,
+            transition: isDragging || noTransition ? "none" : `transform ${TRANSITION_MS}ms ease`,
           }}
           onTransitionEnd={() => {
-            if (isCloneFrame) {
+            if (!hasClones) return;
+            if (position === 0) {
               setNoTransition(true);
-              setIndex(0);
+              setPosition(promos.length);
+            } else if (position === extended.length - 1) {
+              setNoTransition(true);
+              setPosition(1);
             }
           }}
         >
-          {slides.map((promo, i) => (
+          {extended.map((promo, i) => (
             <Link
               key={`${promo.id}-${i}`}
               href={`/promociones/${promo.id}`}
+              onClick={handleSlideClick}
+              draggable={false}
               className="relative flex min-h-32 min-w-full items-center gap-3 overflow-hidden rounded-2xl border border-primary/40 bg-primary/10 p-4 shadow-sm"
               style={
                 promo.imageUrl
                   ? {
-                      backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.6), rgba(0,0,0,0.2)), url(${promo.imageUrl})`,
+                      backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.8), rgba(0,0,0,0.5)), url(${promo.imageUrl})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }
@@ -107,15 +171,12 @@ export function PromoCarousel({ promos, isActive }: { promos: CarouselPromo[]; i
           ))}
         </div>
       </div>
-      {loop && (
+      {hasClones && (
         <div className="flex justify-center gap-1.5">
           {promos.map((promo, i) => (
             <span
               key={promo.id}
-              className={cn(
-                "size-1.5 rounded-full transition-colors",
-                i === index % promos.length ? "bg-primary" : "bg-border"
-              )}
+              className={cn("size-1.5 rounded-full transition-colors", i === realIndex ? "bg-primary" : "bg-border")}
             />
           ))}
         </div>
